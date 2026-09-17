@@ -79,11 +79,17 @@ database without re-running `./render` publishes a stale site. Do both.
 The photos themselves stay out of the repo (`photos/` is ignored). The
 catalogue is public; pictures of someone's living room are not.
 
-There is still an artifact at
-<https://claude.ai/code/artifact/e377db7d-9cb4-426d-bb2c-c689f30e2c02> from
-before the move. To refresh it, publish `docs/index.html` while passing that
-URL explicitly - the file path changed, so without the `url` it would claim a
-new artifact instead of updating the old one.
+`bookshelf.template.html` is a fragment with no `<html>` or `<head>`, because
+that is the shape the artifact runtime wanted - it supplied the skeleton. Pages
+supplies nothing, so `render` prepends its own: charset, viewport, and the
+three reset rules the artifact wrapper used to give us. Without the viewport
+meta a phone lays the page out at 980px and the 720px media query never fires,
+which is exactly what happened on the first push.
+
+That makes `docs/index.html` a complete document and therefore the wrong shape
+to publish as an artifact. The old artifact at
+<https://claude.ai/code/artifact/e377db7d-9cb4-426d-bb2c-c689f30e2c02> is
+frozen at its last version and is no longer the live page.
 
 ## Verification
 
