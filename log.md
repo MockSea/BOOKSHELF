@@ -337,3 +337,122 @@ Five books still have no summary: 4 *The Relational Self*, 6 *Toothpicks &
 Logos*, 15 *eTrust*, 32 *Handbook of Trust Research*, 40 *A Drop of Midnight*.
 Google has no description for any of them — the first four are academic titles
 with thin trade metadata.
+
+---
+
+## 2026-09-17 — shelves 2 and 3, eight photos
+
+Mo: *"New photos added for bookshelf. I added them into specific folders for the
+shelves their on"*. `NEW/SHELF 2` held `IMG_2137`–`IMG_2140`, `NEW/SHELF 3` held
+`IMG_2141`–`IMG_2144`. Four stacks each, shot left to right, same unit geometry
+as shelf 1, so the stacks are 2A–2D and 3A–3D. **108 books.**
+
+Two route notes for next time.
+
+`download_file_content` on a multi-megabyte Drive file always over-caps and
+returns `result (N characters) exceeds maximum allowed tokens`. That is not a
+failure — the harness writes the whole JSON envelope to `tool-results/`, and
+base64-decoding `content` out of the saved file is the delivery mechanism. HEIC
+then needs `sips -s format jpeg` before it can be looked at at all.
+
+These frames are 5712x4284, not shelf 1's 4032x3024, and `sips` crops in
+*stored* pixel coordinates while the EXIF orientation flips the image 90° for
+display — so a horizontal band on screen is a vertical crop on disk, and
+`-c H W --cropOffset Y X` takes those transposed. Worth knowing before cropping
+a spine again.
+
+### IMG_2137 → shelf 2A, 13 books
+Toxic Sludge Is Good For You! down to Sources of the Self. Two Spanish-language
+psychedelics books at the top. **Jill Fisher's *Adverse Events* appears twice**,
+at positions 10 and 12 — not a misread, there are two copies on the stack.
+
+### IMG_2138 → shelf 2B, 13 books
+The Soul of an Octopus down to The Disciplinary Frame. All legible.
+
+### IMG_2139 → shelf 2C, 15 books, one unreadable
+Hackea tu macho down to Engineering Culture. **The third spine from the top is
+plain green with no lettering caught by the frame** — logged as `needs_input`
+with the question for Mo rather than guessed at. Panofsky's *Perspective as
+Symbolic Form* has its first word hidden under the stack above, so it went in at
+0.85. "STRONG TOWNS" is visible along the top of this frame; that is shelf 1C
+seen from below and was not re-entered.
+
+### IMG_2140 → shelf 2D, 13 books
+The Manga Guide to Regression Analysis down to Getting Ahead Collectively.
+**Barbara Smith's *The Truth That Never Hurts* appears twice**, at positions 4
+and 5 — again two real copies, not a double read.
+
+### IMG_2141 → shelf 3A, 11 books
+Fugitives, Smugglers, and Thieves down to Turing's Cathedral. **The third spine
+is covered by two resale barcode stickers**; what reads is "The Timeless Way"
+and a name ending "…der", so it is in as Christopher Alexander's *The Timeless
+Way of Building* at `needs_input`, not as a clean row.
+
+### IMG_2142 → shelf 3B, 13 books
+The Studs Terkel Reader down to Consent of the Networked. All legible.
+
+### IMG_2143 → shelf 3C, 17 books, one uncertain
+Voices of the Wild down to Cyclonopedia — the longest stack in either shelf.
+**Position 12 is mostly buried under the book resting on it**: "STOCKHOLM", "&
+Carl-Michael Edenborg" and the Akashic colophon. Read as *Stockholm Noir* from
+the Akashic Noir series, at `needs_input`, because the co-editor's name is the
+half that is covered.
+
+### IMG_2144 → shelf 3D, 13 books
+Yotsuba&! vol. 14 down to Out of Mao's Shadow. The Yotsuba spine faces the
+opposite way from every other book in the frame and reads mirrored; a 180°
+rotation of the crop resolves it — Kiyohiko Azuma, Yen Press, volume 14 in the
+green roundel. **Not a question, just an upside-down book.** The Giles
+*Civilization of China* below it is an old cloth hardcover with the spine cloth
+torn away at the head, so the author line is the only clean reading, at 0.85.
+
+### Same-author clusters worth noting
+Albert O. Hirschman turns up three more times across these two shelves (*Exit,
+Voice, and Loyalty*, *Getting Ahead Collectively*, *Rival Views of Market
+Society*), which makes four with *The Rhetoric of Reaction* on shelf 1D.
+Sarah Igo twice (*The Known Citizen*, *The Averaged American*), and Lo &
+Hasanhodzic twice. Shame and personhood run through both shelves as a theme —
+seven titles between them.
+
+### The matcher was rejecting books it had already found
+Enrichment came back with twelve rows it could not match, and the shape looked
+right — Spanish-language paperbacks and thin academic titles. Three of them were
+not that. *A Libertarian Walks Into a Bear* is in Open Library, the search
+returned it, and the title scored a clean 1.0; the author test threw it away.
+
+`norm()` turned punctuation into spaces, so our side of the comparison held the
+single string `"hongoltz hetling"` while Open Library's side had been split into
+`{"hongoltz", "hetling"}`. Two sets that agree completely and intersect in
+nothing. Every compound or hyphenated surname in the catalogue had the same
+hole: Balachandran Orihuela, Thøgersen, Abu-Lughod, Wolf-Meyer, Gómez-Escolar.
+
+The same substitution was eating accents. `"Oña"` normalised to `"o a"`, both
+tokens too short to survive the filter, which left an empty author set — and an
+empty set does not read as "no match", it reads as *this row claims no author*,
+which switches off the guard instead of failing it. `norm()` now folds accented
+letters onto their ASCII base before stripping punctuation, and surnames are
+tokenised the same way both sides are.
+
+Two smaller things fell out of it. `enrich-retry` was appending the author to
+the free-text query, which takes a query that finds the book and makes it find
+nothing — Open Library's `q=` does not index author names reliably, and the
+match test checks the author anyway, so the query is now the title alone. And
+its write was a plain overwrite, which would have replaced a Google Books
+summary with an Open Library blank; it now fills nulls and adds to the source
+label rather than replacing it.
+
+Recovered: five of the thirteen, including three rows that already had a Google
+Books record and were missing Open Library's subjects and cover. Coverage across
+all 154 books is now 132 summaries, 133 subject lists, 112 covers, 92 years.
+
+Eight rows still have nothing, and those are the real thing: three Spanish-
+language titles, *A Chuukese Theory of Personhood*, *A John Heskett Reader*,
+*Unraveling*, *The Relational Self*, and the green spine nobody can read.
+
+### Open with Mo
+1. The green spine in 2C.
+2. The Timeless Way of Building in 3A.
+3. Stockholm Noir in 3C.
+4. Whether the two duplicate pairs should stay as two rows each or collapse to
+   one row with a count. They are two rows for now, because that is what the
+   shelf holds.
