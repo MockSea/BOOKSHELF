@@ -168,3 +168,32 @@ button as you type, so no constant survives. 136px on a phone after a tighter
 mobile padding pass, 151px on desktop.
 
 BOOKSHELF v7. Mo made it public sometime today; sharing now reads `public`.
+
+## Moved to GitHub Pages — 2026-09-17
+
+Mo asked for the catalogue to live on GitHub Pages so the database is tracked
+as it grows, instead of the artifact needing a manual republish each time.
+Then: host it under my account.
+
+So `library/` became its own repo instead of an untracked corner of
+`workspace/`. `render` now writes `docs/index.html`, which is what Pages
+serves off `main`, and `catalog.db` is tracked rather than ignored — the whole
+point being that the database and the page it produced land in the same commit.
+
+Scrubbed before anything went near a public repo: the Drive folder id out of
+this file and the README, and Mo's email out of the Open Library User-Agent in
+`enrich` (replaced with the repo URL, which is a contact Open Library can
+actually use). `photos/` and `work/` are ignored — the catalogue is public,
+pictures of TNK's living room are not.
+
+No GitHub Action. The token here has `repo` but not `workflow`, so a workflow
+file can't be pushed, and Pages-from-branch does the same job here: a push is
+a deploy. It also means the site can only be as current as the last `./render`,
+so that is now written into the README as one step and not two.
+
+Verification does not move. Pages is static; the swipe portal has to write a
+verdict somewhere, and that somewhere is the artifact runtime's `db`. Shelf
+Check stays an artifact.
+
+Blocked at the last step: creating the public repo was denied here, so the push
+and the Pages switch are waiting on Mo.
