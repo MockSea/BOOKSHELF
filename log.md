@@ -242,3 +242,63 @@ One thing worth keeping: `.lhead` and each `.lrow` are separate grids, so an
 `auto` track sizes to the header word in one and to the 15px swatch in the
 other, and the title column starts in a different place on every line. Both
 breakpoints use fixed tracks now. Verified aligned at 1280 and 390.
+
+## Enrichment, and what was empty — 2026-09-17
+
+Mo: *"How's enrichment going? I'm seeing a lot of empty stuff"*. He was right,
+and the reason was structural rather than a bad run.
+
+`enrich` asked Open Library one question — `search.json`, which answers about a
+**work**. A shelf holds an **edition**. Year, ISBN, binding and page count are
+properties of a printing and `search.json` carries none of them, so `year` and
+`isbn13` were at 0 of 46 while subjects and covers filled in normally. Worse,
+the one ISBN the work search did return was being written to `ol_isbn13`, a
+different column from the `isbn13` the record view reads, so it never appeared.
+
+The fix is a third request, to `{work}/editions.json`, and a rule for choosing
+from the list. The tie to *this copy* is the imprint off the spine, compared by
+token containment rather than substring: "Belknap / Harvard" has to match
+"Belknap Press of Harvard University Press", while "Anchor Books" has to refuse
+"Pantheon Books" — they agree only on the word "books", which is why the
+stopword set exists. Davos Man has three editions; exactly one says Custom
+House, and that one carries the ISBN, 336 pages and "hardcover".
+
+**34 of 46 are tied to an edition, all of them by publisher.** year 0 → 34,
+isbn 0 → 34, publisher 40, format 22, pages 38, subjects 32, cover 34.
+
+The twelve with no tie write nothing, and the record view now says which of the
+two reasons applies — no work matched at all, or a work matched and no edition
+under this imprint. A blank with a reason is more use than a blank, and much
+more use than a plausible wrong year.
+
+### Two things already wrong on the live page
+
+Both found by the edition pass and fixed in the data, with a guard added to the
+scripts so neither recurs.
+
+**Three wrong printings.** My first rule took a work's sole edition when the
+imprint couldn't settle it. That gave The Edge of Islam a 2002 UMI dissertation
+microfilm (the spine says Duke), Radical Dharma a ReadHowYouWant large-print
+reprint (North Atlantic Books), and China in Ten Words the Pantheon hardcover's
+ISBN for an Anchor paperback. A sole edition is now only taken when we have no
+imprint of our own to check it against — where we do have one and it disagrees,
+the disagreement *is* the finding. Zero `sole` matches remain.
+
+**A wholly wrong work.** Baldwin's *Collected Essays* had matched
+`/works/OL1528260W` — an 1902 C. Scribner's Sons volume, subjects "Philosophy;
+Psychology", someone else's cover, all of it live on the page. It scored 0.85 on
+an exact title match against a record naming no author, and nothing objected
+because there was no author to disagree with. `confirmable()` now says a bare
+title match on an authorless record only stands if the title is doing real
+work — three meaningful words is a book, two is a category. That keeps China in
+Ten Words (filed under 余华, unreadable after normalisation) and rejects
+Collected Essays. The Library of America edition is not in Open Library's index
+at all, so the right answer there is no match; the row is cleared.
+
+### Summaries stay at 19 of 46
+
+Not a bug and not fixable here. The only source is `description` on the work
+record and most work records don't have one — sampled six of the blanks, all
+`None`; edition records have no description field at all. Google Books has
+descriptions and returns 429 to every unauthenticated request, re-confirmed
+today. Closing it needs a free Google Books API key, which is Mo's call.

@@ -532,6 +532,8 @@
     line-height: 1.45;
     color: #8F95A4;
   }
+  .m-body dd a { color: var(--blue); text-underline-offset: 2px; }
+  .m-body dd a:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
   .m-body dl { margin: 0; display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 8px 14px; }
   .m-body dt {
     font-size: 11px;
@@ -863,6 +865,13 @@ function open(b) {
     ? `<h3 class="m-sec">${title}${note ? `<small>${note}</small>` : ''}</h3>${body}`
     : '';
 
+  /* Year, ISBN, binding and page count are properties of a printing, not of a
+     book, so they only arrive once the catalogue has an edition whose imprint
+     agrees with the spine. When it does, that edition is where they came from,
+     and it gets named and linked so the claim can be checked. */
+  const edKey = b.ol_edition || '';
+  const tied = !!edKey;
+
   const copy = dl([
     ['Spine reads', b.spine ? `<span class="spine">${esc(b.spine)}</span>` : ''],
     ['Subtitle', esc(b.subtitle || '')],
@@ -871,11 +880,15 @@ function open(b) {
     ['Edition', esc(b.edition || '')],
     ['Format', esc(b.format || '')],
     ['ISBN', esc(b.isbn13 || b.isbn10 || '')],
+    ['Pages', tied ? (b.page_count || '') : ''],
+    ['Catalogued as', tied
+      ? `<a href="https://openlibrary.org${esc(edKey)}" target="_blank" rel="noopener">${esc(edKey.split('/').pop())}</a>`
+      : ''],
   ]);
 
   const work = dl([
     ['First published', b.ol_first_year || ''],
-    ['Pages', b.page_count || ''],
+    ['Pages', tied ? '' : (b.page_count || '')],
     ['Series', [b.series, b.series_index].filter(Boolean).map(esc).join(' ')],
   ]);
 
@@ -894,11 +907,17 @@ function open(b) {
     ['ISBN', b.isbn13 || b.isbn10],
   ].filter(([, v]) => !v).map(([k]) => k);
 
+  /* A blank has a reason, and the reason is more use than the blank. */
+  const why = tied ? ''
+    : b.ol_work
+      ? ' The catalogue has the book but no edition under this imprint, and a year off the wrong printing is worse than none.'
+      : ' Nothing in the catalogue answered to this title and author.';
+
   $('d-fields').innerHTML =
-    sec('This copy', 'Read off the photograph', copy) +
+    sec('This copy', tied ? 'The spine, and the edition it matches' : 'Read off the photograph', copy) +
     sec('The work', 'From a catalogue lookup', work) +
     sec('The record', '', record) +
-    (missing.length ? `<p class="m-gone">Not recorded yet: ${missing.join(', ')}.</p>` : '');
+    (missing.length ? `<p class="m-gone">Not recorded yet: ${missing.join(', ')}.${why}</p>` : '');
 
   dlg.showModal();
 }

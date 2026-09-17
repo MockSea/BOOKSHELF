@@ -49,8 +49,31 @@ CREATE TABLE IF NOT EXISTS books (
   notes        TEXT,
 
   created_at   TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+
+  -- What a catalogue lookup added, kept apart from what the photo said. Two
+  -- lookups, because a shelf holds an *edition* and the first lookup answers
+  -- about the *work*: `ol_work` is the book Open Library thinks this is, and
+  -- `ol_edition` is the printing, tied by matching the imprint on the spine.
+  -- Nothing below ever overwrites a column above it; `enrich` COALESCEs, so a
+  -- reading off the photograph and a verdict from Mo both outrank a catalogue.
+  summary          TEXT,     -- the work's own description, where it has one
+  subjects         TEXT,     -- "Fiction; Economics", semicolon-separated
+  page_count       INTEGER,  -- of the matched edition, not of the work
+  cover_url        TEXT,
+  ol_work          TEXT,     -- /works/OL...W
+  ol_first_year    INTEGER,  -- first publication of the work, any edition
+  ol_isbn13        TEXT,     -- what the *work* search returned; see note below
+  ol_edition       TEXT,     -- /books/OL...M, the printing on this shelf
+  edition_match    TEXT,     -- how it was tied: 'publisher' | 'sole'
+  enrich_source    TEXT,     -- 'openlibrary', 'none', or a '+' join
+  enrich_confidence REAL,
+  enriched_at      TEXT
 );
+
+-- `ol_isbn13` is deliberately not `isbn13`. It is whatever ISBN the work-level
+-- search happened to surface, which belongs to some printing and not
+-- necessarily this one. `isbn13` is only written from a matched edition.
 
 CREATE INDEX IF NOT EXISTS books_status_idx ON books(status);
 CREATE INDEX IF NOT EXISTS books_shelf_idx  ON books(shelf, position);
