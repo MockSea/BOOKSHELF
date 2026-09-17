@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Build the Shelf Check page from the catalog.
+
+The private half of BOOKSHELF. Same catalogue, one book at a time, so Mo can
+say good or off without reading a table. Verdicts land in the artifact's own
+store, not here; `read_db` pulls them back and `apply-verdicts` writes them
+into catalog.db.
+"""
+
+import json
+import sqlite3
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+DB = HERE / "catalog.db"
+OUT = HERE / "swipe.html"
+TEMPLATE = HERE / "swipe.template.html"
+
+# What the card shows. Everything else on the row is bookkeeping and would
+# only give him more to read past.
+FIELDS = (
+    "id shelf position title subtitle authors publisher year edition isbn13 "
+    "isbn10 format language series series_index contributor question status "
+    "summary subjects page_count ol_first_year"
+).split()
+
+
+def books():
+    con = sqlite3.connect(DB)
+    con.row_factory = sqlite3.Row
+    rows = con.execute(
+        f"SELECT {', '.join(FIELDS)} FROM books ORDER BY shelf, position, id")
+    return [{k: v for k, v in dict(r).items() if v not in (None, "")}
+            for r in rows]
+
+
+def main():
+    if not TEMPLATE.exists():
+        sys.exit(f"missing {TEMPLATE}")
+    rows = books()
+    for r in rows:
+        r.setdefault("title", "Untitled")
+    html = TEMPLATE.read_text()
+    marker = "/*DATA*/"
+    if html.count(marker) != 1:
+        sys.exit("template needs exactly one /*DATA*/ marker")
+    OUT.write_text(html.replace(marker, json.dumps({"books": rows},
+                                                   ensure_ascii=False)))
+    print(f"{len(rows)} books -> {OUT}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,559 @@
+<title>Shelf Check</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Archivo:wght@400;500;600;700&family=Caveat+Brush&display=swap">
+<style>
+  :root {
+    --blue: #1E4BD6;
+    --blue-deep: #12318F;
+    --yellow: #FFC425;
+    --red: #E8412A;
+    --paper: #FBF5E9;
+    --paper-2: #F2EADA;
+    --ink: #16181F;
+    --ink-soft: #4E5464;
+    --rule: #E2DCCE;
+    --display: 'Bowlby One', 'Arial Black', sans-serif;
+    --body: 'Archivo', system-ui, -apple-system, sans-serif;
+    --hand: 'Caveat Brush', 'Comic Sans MS', cursive;
+  }
+
+  /* Single-theme on purpose: this is the back room of a page that already
+     committed to one look, and two of them would read as a different tool. */
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--blue-deep);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  .app {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    max-width: 560px;
+    margin: 0 auto;
+    padding-inline: 16px;
+  }
+
+  /* ------------------------------------------------------------------ top */
+  .top { padding-block: 18px 12px; color: #fff; }
+
+  .top h1 {
+    font-family: var(--display);
+    font-size: 26px;
+    line-height: 1;
+    margin: 0;
+    color: var(--yellow);
+    letter-spacing: .01em;
+  }
+  .top p { margin: 7px 0 0; font-size: 13px; color: #BFD0FF; }
+
+  .bar {
+    margin-top: 12px;
+    height: 12px;
+    background: rgba(255,255,255,.14);
+    border: 2px solid var(--ink);
+    display: flex;
+  }
+  .bar i { display: block; height: 100%; }
+  .bar .ok  { background: var(--yellow); }
+  .bar .off { background: var(--red); }
+
+  /* ----------------------------------------------------------------- deck */
+  /* The deck takes the whole middle row rather than sitting at a fixed
+     height, so a tall phone gets a tall card and a long record scrolls
+     inside it instead of pushing the buttons off the screen. */
+  .deck {
+    position: relative;
+    align-self: stretch;
+    width: 100%;
+    padding-block: 14px;
+    min-height: 380px;
+  }
+
+  .card {
+    position: absolute;
+    inset: 0;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 8px 9px 0 var(--blue);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  /* The card behind is a promise that the stack continues; it never moves. */
+  .card.next {
+    transform: translateY(12px) scale(.965);
+    box-shadow: 8px 9px 0 rgba(0,0,0,.25);
+    pointer-events: none;
+    filter: saturate(.7);
+  }
+  .card.gone { transition: transform .32s ease-in, opacity .32s ease-in; opacity: 0; }
+
+  .c-head {
+    padding: 16px 18px 13px;
+    border-bottom: 3px solid var(--ink);
+    background: var(--yellow);
+  }
+  .c-where {
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 110, 'wght' 700;
+    color: var(--blue-deep);
+  }
+  .c-title {
+    font-family: var(--display);
+    font-size: clamp(21px, 5.4vw, 28px);
+    line-height: 1.08;
+    margin: 7px 0 0;
+    overflow-wrap: anywhere;
+  }
+  .c-subtitle {
+    margin: 6px 0 0;
+    font-size: 14px;
+    font-variation-settings: 'wght' 500;
+    color: #5A4A12;
+    overflow-wrap: anywhere;
+  }
+
+  .c-body { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px 18px; }
+
+  .grp {
+    margin-top: 14px;
+    font-size: 10.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 110, 'wght' 700;
+    color: #8F95A4;
+    border-bottom: 2px solid var(--rule);
+    padding-bottom: 5px;
+  }
+
+  dl { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 7px 14px; margin: 11px 0 0; }
+  dt {
+    font-size: 11px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 106, 'wght' 700;
+    color: var(--ink-soft);
+    padding-top: 2px;
+  }
+  dd { margin: 0; font-size: 14.5px; overflow-wrap: anywhere; }
+  dd small { color: var(--ink-soft); font-size: 12px; }
+
+  .sum {
+    margin: 12px 0 0;
+    padding: 12px 14px;
+    background: var(--paper-2);
+    border-left: 5px solid var(--blue);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tags span { font-size: 11.5px; padding: 2px 7px; border: 2px solid var(--rule); background: #fff; }
+
+  /* The verdict stamp rides the drag, so the gesture says what it will do
+     before you let go of it. */
+  .stamp {
+    position: absolute;
+    top: 74px;
+    font-family: var(--display);
+    font-size: 30px;
+    letter-spacing: .02em;
+    padding: 7px 14px;
+    border: 4px solid currentColor;
+    opacity: 0;
+    pointer-events: none;
+    transform: rotate(-9deg);
+  }
+  .stamp.yes { left: 18px; color: var(--blue); }
+  .stamp.no  { right: 18px; color: var(--red); transform: rotate(9deg); }
+
+  /* ----------------------------------------------------------------- acts */
+  .acts { padding-block: 14px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  button {
+    font: inherit;
+    font-variation-settings: 'wdth' 108, 'wght' 700;
+    font-size: 13px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    padding: 15px 12px;
+    border: 3px solid var(--ink);
+    cursor: pointer;
+    border-radius: 0;
+  }
+  button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+  .no  { background: var(--red); color: #fff; }
+  .yes { background: var(--yellow); color: var(--ink); }
+  .undo {
+    grid-column: 1 / -1;
+    background: transparent;
+    border-color: rgba(255,255,255,.35);
+    color: #BFD0FF;
+    padding-block: 9px;
+    font-size: 11.5px;
+  }
+  .undo[disabled] { opacity: .35; cursor: default; }
+
+  .keys { margin: 9px 0 0; font-size: 11px; color: #8FA6E8; text-align: center; letter-spacing: .04em; }
+  .keys kbd {
+    font: inherit; font-size: 11px; background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.3); padding: 1px 5px;
+  }
+
+  /* ----------------------------------------------------------------- note */
+  .note {
+    background: var(--paper);
+    border: 3px solid var(--red);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .note p { margin: 0 0 8px; font-size: 13px; }
+  .note b { font-variation-settings: 'wght' 700; }
+  .note form { display: flex; gap: 8px; }
+  .note input {
+    flex: 1 1 auto; min-width: 0; font: inherit; font-size: 14px;
+    padding: 10px 11px; border: 3px solid var(--ink); background: #fff;
+    color: var(--ink); border-radius: 0; -webkit-appearance: none;
+  }
+  .note button { padding: 10px 13px; background: var(--ink); color: var(--paper); }
+
+  /* ----------------------------------------------------------------- done */
+  .done { background: var(--paper); border: 3px solid var(--ink); box-shadow: 8px 9px 0 var(--yellow); padding: 22px 20px; }
+  .done h2 { font-family: var(--display); font-size: 25px; margin: 0; line-height: 1.1; }
+  .done p { font-size: 14.5px; line-height: 1.55; }
+  .done .hand { font-family: var(--hand); font-size: 20px; color: var(--blue); transform: rotate(-1deg); display: inline-block; }
+  .flagged { margin: 14px 0 0; padding: 0; list-style: none; }
+  .flagged li { border-top: 2px solid var(--rule); padding: 9px 0; font-size: 14px; }
+  .flagged em { display: block; font-style: normal; font-size: 13px; color: var(--ink-soft); margin-top: 3px; }
+  .done button { margin-top: 16px; background: var(--paper-2); }
+
+  .msg { color: #FFD9D3; font-size: 13px; padding-block: 10px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .card.gone { transition: none !important; }
+  }
+</style>
+
+<div class="app">
+  <header class="top">
+    <h1>Shelf Check</h1>
+    <p id="standing">Loading the shelf…</p>
+    <div class="bar" id="bar" aria-hidden="true"></div>
+  </header>
+
+  <main class="deck" id="deck"></main>
+
+  <div>
+    <div class="note" id="note" hidden>
+      <p>Flagged <b id="note-title"></b>. What's off about it?</p>
+      <form id="note-form">
+        <input id="note-input" type="text" maxlength="200" autocomplete="off"
+               placeholder="Wrong author, wrong edition, not my copy…"
+               aria-label="What is wrong with this record">
+        <button type="submit">Save</button>
+      </form>
+    </div>
+    <div class="acts" id="acts" hidden>
+      <button class="no"  id="btn-no"  type="button">Something's off</button>
+      <button class="yes" id="btn-yes" type="button">All good</button>
+      <button class="undo" id="btn-undo" type="button" disabled>Undo last</button>
+    </div>
+    <p class="keys" id="keys" hidden><kbd>&larr;</kbd> off &nbsp; <kbd>&rarr;</kbd> good &nbsp; <kbd>U</kbd> undo</p>
+    <p class="msg" id="msg" hidden></p>
+  </div>
+</div>
+
+<script>
+const DATA = /*DATA*/;
+const BOOKS = DATA.books;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* Verdicts live in the artifact's own store, not in this page, because the
+   page is republished every time the catalogue changes and anything held in
+   the HTML would go with it. */
+let db = null;
+const verdicts = new Map();   // book id -> {verdict, note, at}
+let queue = [];               // ids still to judge, in shelf order
+let history = [];             // ids judged this session, newest last
+
+function where(b) {
+  return (b.shelf || '?') + (b.position ? ' #' + b.position : '');
+}
+
+function fields(b) {
+  const line = (k, v) => v ? `<dt>${esc(k)}</dt><dd>${v}</dd>` : '';
+  const spine = [
+    line('Author', esc(b.authors)),
+    line('Publisher', esc(b.publisher)),
+    line('Year', esc(b.year)),
+    line('Edition', esc(b.edition)),
+    line('Format', esc(b.format)),
+    line('Series', b.series ? esc(b.series) + (b.series_index ? ' ' + esc(b.series_index) : '') : ''),
+    line('ISBN', esc(b.isbn13 || b.isbn10)),
+    line('Language', esc(b.language)),
+    line('Owner', esc(b.contributor)),
+  ].join('');
+
+  const subjects = (b.subjects || '').split(';').map(t => t.trim()).filter(Boolean);
+  const found = [
+    subjects.length ? line('Genre', `<span class="tags">${subjects.map(t => `<span>${esc(t)}</span>`).join('')}</span>`) : '',
+    line('First published', b.ol_first_year ? esc(b.ol_first_year) + ' <small>(the work, not this copy)</small>' : ''),
+    line('Pages', esc(b.page_count)),
+  ].join('');
+
+  let html = `<div class="grp">Read off the spine</div><dl>${spine || '<dt>Nothing</dt><dd>Only a title</dd>'}</dl>`;
+  if (found || b.summary) {
+    html += `<div class="grp">Looked up afterwards</div>`;
+    if (found) html += `<dl>${found}</dl>`;
+    if (b.summary) html += `<p class="sum">${esc(b.summary)}</p>`;
+  }
+  if (b.question) html += `<div class="grp">I wasn't sure</div><p class="sum">${esc(b.question)}</p>`;
+  return html;
+}
+
+function cardHTML(b, cls) {
+  return `<article class="card ${cls}" data-id="${b.id}">
+    <div class="c-head">
+      <div class="c-where">Shelf ${esc(where(b))}</div>
+      <h2 class="c-title">${esc(b.title)}</h2>
+      ${b.subtitle ? `<p class="c-subtitle">${esc(b.subtitle)}</p>` : ''}
+    </div>
+    <div class="c-body">${fields(b)}</div>
+    <div class="stamp yes">Good</div>
+    <div class="stamp no">Off</div>
+  </article>`;
+}
+
+function draw() {
+  const deck = $('deck');
+  if (!queue.length) { deck.innerHTML = doneHTML(); wireDone(); paint(); return; }
+  const top = BOOKS.find(b => b.id === queue[0]);
+  const next = queue[1] && BOOKS.find(b => b.id === queue[1]);
+  deck.innerHTML = (next ? cardHTML(next, 'next') : '') + cardHTML(top, 'top');
+  drag(deck.querySelector('.card.top'));
+  paint();
+}
+
+function paint() {
+  const judged = verdicts.size;
+  const off = [...verdicts.values()].filter(v => v.verdict === 'off').length;
+  const ok = judged - off;
+  $('standing').textContent = queue.length
+    ? `${judged} of ${BOOKS.length} checked, ${queue.length} to go`
+    : `All ${BOOKS.length} checked`;
+  $('bar').innerHTML =
+    `<i class="ok" style="width:${ok / BOOKS.length * 100}%"></i>` +
+    `<i class="off" style="width:${off / BOOKS.length * 100}%"></i>`;
+  const live = !!queue.length && !!db;
+  $('acts').hidden = !live;
+  $('keys').hidden = !live;
+  $('btn-undo').disabled = !history.length;
+}
+
+function doneHTML() {
+  const off = [...verdicts.entries()].filter(([, v]) => v.verdict === 'off');
+  const list = off.map(([id, v]) => {
+    const b = BOOKS.find(b => b.id === Number(id));
+    return `<li>${esc(b ? b.title : id)}${v.note ? `<em>${esc(v.note)}</em>` : '<em>No note</em>'}</li>`;
+  }).join('');
+  return `<div class="done">
+    <h2>Shelf 1, checked.</h2>
+    <p>${off.length
+      ? `${off.length} flagged. I'll work through them and fix the catalogue, then the public page will say verified.`
+      : `Nothing flagged. <span class="hand">Suspiciously clean.</span>`}</p>
+    ${list ? `<ul class="flagged">${list}</ul>` : ''}
+    <button type="button" id="btn-again">Go through them again</button>
+  </div>`;
+}
+
+function wireDone() {
+  const again = $('btn-again');
+  if (again) again.addEventListener('click', () => {
+    queue = BOOKS.map(b => b.id);
+    history = [];
+    draw();
+  });
+}
+
+/* ---- the gesture ----------------------------------------------------------
+   Pointer events rather than touch, so a trackpad drag behaves the same as a
+   thumb. 90px of travel commits; anything shorter springs back, which is what
+   makes an accidental scroll harmless. */
+const THROW = 90;
+
+function drag(card) {
+  if (!card) return;
+  const yes = card.querySelector('.stamp.yes'), no = card.querySelector('.stamp.no');
+  let x0 = 0, y0 = 0, dx = 0, dy = 0, down = false;
+
+  card.addEventListener('pointerdown', e => {
+    down = true; x0 = e.clientX; y0 = e.clientY;
+    card.setPointerCapture(e.pointerId);
+  });
+
+  card.addEventListener('pointermove', e => {
+    if (!down) return;
+    dx = e.clientX - x0; dy = e.clientY - y0;
+    if (Math.abs(dx) < Math.abs(dy) * 0.8) return;   // a vertical drag is a scroll
+    card.style.transform = `translate(${dx}px, ${dy * 0.25}px) rotate(${dx / 22}deg)`;
+    yes.style.opacity = Math.max(0, Math.min(1, dx / THROW));
+    no.style.opacity = Math.max(0, Math.min(1, -dx / THROW));
+  });
+
+  const release = () => {
+    if (!down) return;
+    down = false;
+    if (dx > THROW) return commit('ok');
+    if (dx < -THROW) return commit('off');
+    card.style.transform = '';
+    yes.style.opacity = no.style.opacity = 0;
+    dx = dy = 0;
+  };
+  card.addEventListener('pointerup', release);
+  card.addEventListener('pointercancel', release);
+}
+
+/* ---- verdicts ------------------------------------------------------------ */
+let busy = false;
+
+async function commit(verdict) {
+  if (busy || !queue.length || !db) return;
+  busy = true;
+  const id = queue[0];
+  const book = BOOKS.find(b => b.id === id);
+  const card = document.querySelector('.card.top');
+  if (card) {
+    card.classList.add('gone');
+    card.style.transform = `translate(${verdict === 'ok' ? 700 : -700}px, 60px) rotate(${verdict === 'ok' ? 24 : -24}deg)`;
+  }
+
+  const row = { verdict, note: '', at: new Date().toISOString(), title: book.title };
+  verdicts.set(id, row);
+  queue = queue.slice(1);
+  history.push(id);
+
+  try {
+    await db.doc('verdicts/' + id).set(row);
+  } catch (e) {
+    verdicts.delete(id);
+    queue = [id, ...queue];
+    history.pop();
+    fail(e);
+  }
+
+  if (verdict === 'off') openNote(id, book.title);
+  setTimeout(() => { busy = false; draw(); }, card ? 260 : 0);
+}
+
+async function undo() {
+  if (busy || !history.length || !db) return;
+  busy = true;
+  const id = history.pop();
+  const kept = verdicts.get(id);
+  verdicts.delete(id);
+  queue = [id, ...queue];
+  closeNote();
+  try {
+    await db.doc('verdicts/' + id).delete();
+  } catch (e) {
+    verdicts.set(id, kept);
+    history.push(id);
+    queue = queue.slice(1);
+    fail(e);
+  }
+  busy = false;
+  draw();
+}
+
+/* The note is optional and lands after the verdict, so flagging stays one
+   gesture. It stays open across the next card, which is the only way to say
+   what was wrong with a book you have already swiped past. */
+let noteFor = null;
+
+function openNote(id, title) {
+  noteFor = id;
+  $('note-title').textContent = title;
+  $('note-input').value = '';
+  $('note').hidden = false;
+  $('note-input').focus({ preventScroll: true });
+}
+
+function closeNote() { noteFor = null; $('note').hidden = true; }
+
+$('note-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (noteFor == null || !db) return;
+  const id = noteFor, note = $('note-input').value.trim();
+  closeNote();
+  const row = verdicts.get(id);
+  if (!row) return;
+  row.note = note;
+  verdicts.set(id, row);
+  try { await db.doc('verdicts/' + id).update({ note }); } catch (e) { fail(e); }
+});
+
+function fail(e) {
+  const code = e && e.code;
+  const say = {
+    not_granted: "This account can't write verdicts here.",
+    revoked: "Access to the verdict store was revoked. Nothing is saving.",
+    capability_disabled: "The verdict store is switched off for this page.",
+    capability_removed: "The verdict store is gone from this page.",
+    unavailable: "Lost the connection. That verdict didn't save.",
+    quota_exceeded: "The store is full. That verdict didn't save.",
+    resource_exhausted: "Too many writes at once. Give it a second.",
+  }[code] || "That verdict didn't save. Try it again.";
+  $('msg').hidden = false;
+  $('msg').textContent = say;
+  setTimeout(() => { $('msg').hidden = true; }, 6000);
+}
+
+/* ---- wiring -------------------------------------------------------------- */
+$('btn-yes').addEventListener('click', () => commit('ok'));
+$('btn-no').addEventListener('click', () => commit('off'));
+$('btn-undo').addEventListener('click', undo);
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') { if (e.key === 'Escape') closeNote(); return; }
+  if (e.key === 'ArrowRight') { e.preventDefault(); commit('ok'); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); commit('off'); }
+  else if (e.key === 'u' || e.key === 'U') { e.preventDefault(); undo(); }
+});
+
+/* The deck renders from the embedded catalogue before the store answers, so
+   the page is never a spinner; the buttons light up once it does. */
+queue = BOOKS.map(b => b.id);
+draw();
+$('standing').textContent = 'Reading what you have already checked…';
+
+Promise.resolve(window.claude?.use?.('db') ?? null).then(async store => {
+  if (!store) {
+    $('msg').hidden = false;
+    $('msg').textContent = "Can't reach the verdict store, so nothing would save. Open this from your own account.";
+    $('standing').textContent = `${BOOKS.length} books, read-only`;
+    return;
+  }
+  db = store;
+  try {
+    const snap = await db.collection('verdicts').get();
+    snap.docs.forEach(d => verdicts.set(Number(d.id), d.data() || {}));
+  } catch (e) { fail(e); }
+  queue = BOOKS.map(b => b.id).filter(id => !verdicts.has(id));
+  draw();
+});
+</script>

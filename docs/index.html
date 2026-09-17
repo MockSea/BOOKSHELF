@@ -1,0 +1,755 @@
+<title>BOOKSHELF</title>
+
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Archivo:wdth,wght@62..125,400..800&family=Caveat+Brush&display=swap">
+
+<style>
+  :root {
+    --blue:      #1E4BD6;
+    --blue-deep: #12318F;
+    --yellow:    #FFC425;
+    --red:       #E8412A;
+    --paper:     #FBF5E9;
+    --paper-2:   #F2EADA;
+    --ink:       #16181F;
+    --ink-soft:  #4E5464;
+    --rule:      #E2DCCE;
+
+    --display: 'Bowlby One', 'Arial Black', sans-serif;
+    --body: 'Archivo', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    --hand: 'Caveat Brush', 'Bradley Hand', cursive;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 18px; }
+
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    background: var(--blue);
+    color: #fff;
+    border-bottom: 6px solid var(--ink);
+  }
+  .hero .wrap { padding-block: 30px 26px; }
+
+  /* Bowlby One sets wide: at 390px the old clamp(52px, 15vw) plus the skew and
+     the two offset shadows measured past the gutter. 11.5vw keeps the whole
+     stack, shadows included, inside .wrap down to 320px. */
+  .wordmark {
+    font-family: var(--display);
+    font-size: clamp(34px, 11.5vw, 128px);
+    line-height: .92;
+    letter-spacing: .005em;
+    color: var(--yellow);
+    text-shadow:
+      .028em .034em 0 var(--red),
+      .056em .068em 0 var(--blue-deep);
+    transform: skewX(-5deg);
+    transform-origin: left bottom;
+    margin: 0;
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .kicker {
+    font-family: var(--body);
+    font-variation-settings: 'wdth' 118, 'wght' 700;
+    font-size: 12px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    margin: 0 0 12px;
+  }
+
+  .standing {
+    margin: 0 0 14px;
+    max-width: 46ch;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: #DCE5FF;
+  }
+  .standing b { color: #fff; font-variation-settings: 'wght' 700; }
+
+  .blurb {
+    max-width: 44ch;
+    margin: 16px 0 0;
+    font-size: 15.5px;
+    color: #E4EBFF;
+  }
+
+  /* --------------------------------------------------------------- meter */
+  .tally {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+  }
+  .tally .big {
+    font-family: var(--display);
+    font-size: clamp(38px, 9vw, 64px);
+    line-height: 1;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .tally .of {
+    font-family: var(--display);
+    font-size: clamp(19px, 4vw, 28px);
+    color: var(--yellow);
+  }
+  .tally .say {
+    font-family: var(--hand);
+    font-size: 22px;
+    color: #BFD0FF;
+    transform: rotate(-1.5deg);
+  }
+
+  /* One cell per shelf, 60 of them. Sixty in one row needs ~5px each; below
+     720px they fold to 20 a row so a cell stays a readable block. */
+  .meter {
+    display: grid;
+    grid-template-columns: repeat(60, 1fr);
+    gap: 3px;
+    margin-top: 14px;
+    padding: 9px;
+    background: var(--blue-deep);
+    border: 3px solid var(--ink);
+  }
+  .meter i {
+    display: block;
+    height: 34px;
+    background: rgba(255,255,255,.14);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.22);
+  }
+  /* Logged and verified are different claims, so they get different fills: a
+     hatched cell says a shelf was read off the spines, a solid one says
+     somebody checked it. Conflating them made 46 look like progress. */
+  .meter i.logged {
+    background: repeating-linear-gradient(
+      -45deg, var(--yellow) 0 3px, var(--blue-deep) 3px 6px);
+    box-shadow: inset 0 0 0 2px var(--yellow);
+  }
+  .meter i.verified { background: var(--yellow); box-shadow: none; }
+
+  .meterkey {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 11.5px;
+    font-variation-settings: 'wdth' 112, 'wght' 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #C6D4FF;
+  }
+  .meterkey span { display: inline-flex; align-items: center; gap: 7px; }
+  .meterkey b { width: 13px; height: 13px; display: block; flex: none; }
+
+  /* ------------------------------------------------------------- stripes */
+  .awning { display: flex; height: 14px; }
+  .awning span { flex: 1; }
+  .awning span:nth-child(odd)  { background: var(--red); }
+  .awning span:nth-child(even) { background: var(--paper-2); }
+
+  /* --------------------------------------------------------------- stacks */
+  .stacks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0;
+    margin: 0;
+    border: 3px solid var(--ink);
+    border-top: 0;
+    background: var(--paper-2);
+  }
+  .stacks div {
+    padding: 13px 15px;
+    border-right: 3px solid var(--ink);
+    min-width: 0;
+  }
+  .stacks div:last-child { border-right: 0; }
+  .stacks dt {
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 110, 'wght' 700;
+    color: var(--blue);
+    margin: 0 0 2px;
+  }
+  .stacks dd {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 25px;
+    line-height: 1.1;
+  }
+  .stacks small {
+    display: block;
+    font-family: var(--body);
+    font-size: 12.5px;
+    font-variation-settings: 'wght' 500;
+    color: var(--ink-soft);
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+  }
+
+  /* -------------------------------------------------------------- toolbar */
+  /* Search, sort and the stack chips stay on screen through all 46 rows,
+     and the column header pins directly beneath them. --stick is the
+     toolbar's own height, measured at runtime, because the chips wrap at
+     phone width and no fixed number survives that. */
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--paper);
+    padding-block: 14px 10px;
+    margin-top: 12px;
+    border-bottom: 3px solid var(--ink);
+  }
+  .toolrow {
+    display: flex;
+    gap: 9px;
+    align-items: stretch;
+  }
+  .search {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    font-variation-settings: 'wght' 500;
+    padding: 10px 12px;
+    border: 3px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    border-radius: 0;
+    -webkit-appearance: none;
+  }
+  .search::placeholder { color: #8A90A0; }
+  .search:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+  .sort {
+    flex: 0 0 auto;
+    max-width: 44%;
+    font: inherit;
+    font-size: 13px;
+    font-variation-settings: 'wdth' 104, 'wght' 700;
+    padding: 10px 11px;
+    border: 3px solid var(--ink);
+    background: var(--yellow);
+    color: var(--ink);
+    border-radius: 0;
+    cursor: pointer;
+  }
+  .sort:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+  .chip {
+    font: inherit;
+    font-size: 12.5px;
+    font-variation-settings: 'wdth' 106, 'wght' 700;
+    letter-spacing: .04em;
+    padding: 7px 11px;
+    border: 3px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { background: var(--yellow); }
+  .chip:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+  .resline {
+    margin: 10px 0 0;
+    font-size: 11.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 110, 'wght' 700;
+    color: var(--blue);
+  }
+
+  /* ----------------------------------------------------------------- list */
+  .list {
+    --cols: 60px minmax(0, 2.3fr) minmax(0, 1.5fr) minmax(0, 1.4fr) 116px 124px;
+    border: 3px solid var(--ink);
+    border-top: 0;
+    background: #fff;
+  }
+
+  .lrow {
+    display: grid;
+    grid-template-columns: var(--cols);
+    gap: 0 12px;
+    align-items: start;
+    padding: 11px 13px;
+    border-top: 2px solid var(--rule);
+  }
+
+  .lhead {
+    position: sticky;
+    top: var(--stick, 0px);
+    z-index: 2;
+    border-top: 0;
+    align-items: center;
+    background: var(--blue);
+    color: #fff;
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 110, 'wght' 700;
+    padding-block: 10px;
+  }
+
+  .lbody .lrow { cursor: pointer; }
+  .lbody .lrow:nth-child(even) { background: #FCFAF4; }
+  .lbody .lrow:hover { background: var(--yellow); }
+  .lbody .lrow:focus-visible { background: var(--yellow); outline: 3px solid var(--blue); outline-offset: -3px; }
+
+  .c-num {
+    font-variation-settings: 'wdth' 88, 'wght' 700;
+    font-size: 12.5px;
+    color: var(--blue);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    padding-top: 1px;
+  }
+  .c-title { font-variation-settings: 'wght' 700; min-width: 0; overflow-wrap: anywhere; }
+  .c-sub { display: block; font-variation-settings: 'wght' 400; font-size: 12.5px; color: var(--ink-soft); }
+  .c-soft { color: var(--ink-soft); font-size: 13.5px; min-width: 0; overflow-wrap: anywhere; }
+  .c-meta { display: none; }
+  .t-none { color: #A9AEBC; }
+
+  .who {
+    display: inline-block;
+    font-size: 11.5px;
+    letter-spacing: .08em;
+    font-variation-settings: 'wdth' 108, 'wght' 700;
+    padding: 3px 8px;
+    background: var(--blue);
+    color: #fff;
+  }
+
+  .st {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 104, 'wght' 700;
+    padding: 3px 7px;
+    border: 2px solid var(--ink);
+    white-space: nowrap;
+  }
+  .st-confirmed   { background: var(--yellow); }
+  .st-unverified {
+    background: none;
+    border-color: transparent;
+    color: #8F95A4;
+    padding-inline: 0;
+  }
+
+  /* Genre and blurb come from a catalogue lookup, not from the photograph, so
+     they are set apart from the spine reading rather than mixed into it. */
+  .c-tag {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 106, 'wght' 600;
+    color: #8F95A4;
+  }
+  .m-sum {
+    margin: 0 0 4px;
+    padding: 13px 15px;
+    background: var(--paper-2);
+    border-left: 5px solid var(--blue);
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .m-sum cite {
+    display: block;
+    margin-top: 8px;
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #8F95A4;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tags span {
+    font-size: 11.5px;
+    padding: 2px 7px;
+    border: 2px solid var(--rule);
+    background: var(--paper);
+  }
+
+  .empty {
+    padding: 26px 14px;
+    text-align: center;
+    color: var(--ink-soft);
+    border: 3px solid var(--ink);
+    border-top: 0;
+    background: #fff;
+  }
+
+  /* --------------------------------------------------------------- record */
+  dialog {
+    border: 4px solid var(--ink);
+    padding: 0;
+    max-width: 560px;
+    width: calc(100% - 32px);
+    max-height: calc(100% - 32px);
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(18,49,143,.6); }
+  .m-head { background: var(--blue); color: #fff; padding: 17px 20px; }
+  .m-head h2 {
+    font-family: var(--display);
+    font-size: clamp(19px, 5.4vw, 24px);
+    line-height: 1.12;
+    margin: 0;
+    color: var(--yellow);
+    overflow-wrap: anywhere;
+  }
+  .m-head p { margin: 6px 0 0; font-size: 13.5px; color: #DCE5FF; }
+  .m-body { padding: 17px 20px 22px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .m-body dl { margin: 0; display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 9px 14px; }
+  .m-body dt {
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 108, 'wght' 700;
+    color: var(--blue);
+    padding-top: 3px;
+  }
+  .m-body dd { margin: 0; font-size: 14.5px; min-width: 0; overflow-wrap: anywhere; }
+  .spine {
+    font-variation-settings: 'wdth' 92, 'wght' 500;
+    background: #fff;
+    border-left: 4px solid var(--red);
+    padding: 7px 10px;
+    font-size: 13.5px;
+  }
+  .m-acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 20px; }
+  .m-close {
+    font: inherit;
+    font-variation-settings: 'wdth' 108, 'wght' 700;
+    font-size: 13px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 11px 16px;
+    border: 3px solid var(--ink);
+    cursor: pointer;
+  }
+  .m-close { background: var(--yellow); color: var(--ink); }
+  .m-close:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+
+  /* ------------------------------------------------------------ phone */
+  /* One DOM, two layouts. On a phone the six-column sheet becomes a track
+     list: where it sits, the title, its state, and everything else folded
+     into one secondary line underneath. Hiding the middle cells takes them
+     out of grid flow entirely, which is why three tracks is the whole
+     template here. */
+  @media (max-width: 720px) {
+    .meter { grid-template-columns: repeat(20, 1fr); }
+    .meter i { height: 22px; }
+
+    .stacks div { border-right: 0; border-bottom: 3px solid var(--ink); }
+    .stacks div:last-child { border-bottom: 0; }
+
+    .list { --cols: 44px minmax(0, 1fr) auto; }
+    .lrow { padding: 12px; gap: 0 10px; }
+    .c-soft,
+    .c-who,
+    .c-tag,
+    .lhead span:nth-child(3),
+    .lhead span:nth-child(4),
+    .lhead span:nth-child(5) { display: none; }
+    .c-meta {
+      display: block;
+      grid-column: 2 / -1;
+      margin-top: 4px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+      overflow-wrap: anywhere;
+    }
+    .c-meta .who { margin-right: 7px; }
+    .c-status { justify-self: end; align-self: start; }
+
+    .m-body dl { grid-template-columns: 1fr; gap: 3px; }
+    .m-body dd + dt { margin-top: 10px; }
+
+    /* Pinned, the toolbar is permanently spending screen, so it gets tighter
+       here than it needs to be on a desktop where it only costs once. */
+    .toolbar { padding-block: 10px 7px; margin-top: 10px; }
+    .chips { margin-top: 7px; gap: 5px; }
+    .chip { padding: 6px 9px; }
+    .resline { margin-top: 7px; font-size: 11px; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lbody .lrow { transition: background .12s ease; }
+  }
+</style>
+
+<div class="hero">
+  <div class="wrap">
+    <p class="kicker">Shelf one, read off the spines</p>
+    <h1 class="wordmark">BOOKSHELF</h1>
+    <p class="blurb">Photographs go in, rows come out. Every row records what was actually printed on the spine, and whether anyone has checked it since.</p>
+
+    <div class="tally">
+      <span class="big" id="count">0</span>
+      <span class="of">of 60 shelves</span>
+      <span class="say" id="say"></span>
+    </div>
+
+    <p class="standing" id="standing"></p>
+
+    <div class="meter" id="meter" aria-hidden="true"></div>
+    <div class="meterkey">
+      <span><b style="background:repeating-linear-gradient(-45deg,#FFC425 0 3px,#12318F 3px 6px);box-shadow:inset 0 0 0 2px #FFC425"></b> Logged, not verified</span>
+      <span><b style="background:#FFC425"></b> Verified</span>
+      <span><b style="background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></b> Not photographed</span>
+    </div>
+  </div>
+</div>
+
+<div class="awning" aria-hidden="true"></div>
+
+<div class="wrap">
+  <dl class="stacks" id="stacks"></dl>
+
+  <div class="toolbar">
+    <div class="toolrow">
+      <input class="search" id="q" type="search" placeholder="Search title, author, publisher, spine" aria-label="Search the catalog">
+      <select class="sort" id="sort" aria-label="Sort the catalog">
+        <option value="shelf">Shelf order</option>
+        <option value="title">Title A–Z</option>
+        <option value="author">Author A–Z</option>
+        <option value="status">Unverified first</option>
+      </select>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filter by stack"></div>
+    <p class="resline" id="resline"></p>
+  </div>
+
+  <div class="list" role="table" aria-label="Catalogued books">
+    <div class="lrow lhead" role="row">
+      <span role="columnheader">Where</span>
+      <span role="columnheader">Title</span>
+      <span role="columnheader">Author</span>
+      <span role="columnheader">Publisher</span>
+      <span role="columnheader">Contributor</span>
+      <span role="columnheader">Status</span>
+    </div>
+    <div class="lbody" id="rows" role="rowgroup"></div>
+  </div>
+  <p class="empty" id="empty" hidden>Nothing matches that.</p>
+
+</div>
+
+<dialog id="dlg">
+  <div class="m-head">
+    <h2 id="d-title"></h2>
+    <p id="d-sub"></p>
+  </div>
+  <div class="m-body">
+    <p class="m-sum" id="d-sum" hidden></p>
+    <dl id="d-fields"></dl>
+    <div class="m-acts">
+      <button class="m-close" id="d-close" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const DATA = {"target": 60, "books": [{"id": 1, "spine": "Baldwin / Collected Essays / The Library of America", "photo_id": 1, "shelf": "1A", "position": 1, "title": "Collected Essays", "subtitle": null, "authors": "Baldwin, James", "publisher": "Library of America", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "spine reads only 'Baldwin'; shrink-wrapped, last word of title cut off in frame", "contributor": "TNK", "summary": null, "subjects": "Philosophy; Psychology", "page_count": 397, "cover_url": "https://covers.openlibrary.org/b/id/1736102-M.jpg", "ol_work": "/works/OL1528260W", "ol_first_year": 1902, "ol_isbn13": "9780404590185", "enrich_source": "openlibrary", "enrich_confidence": 0.85, "enriched_at": "2026-09-17 16:44:07"}, {"id": 2, "spine": "Baldwin / Early Novels & Stories / The Library of America", "photo_id": 1, "shelf": "1A", "position": 2, "title": "Early Novels & Stories", "subtitle": null, "authors": "Baldwin, James", "publisher": "Library of America", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.97, "question": null, "notes": "spine reads only 'Baldwin'; still shrink-wrapped", "contributor": "TNK", "summary": "Novelist, essayist, and public intellectual, James Baldwin was one of the most brilliant and provocative literary figures of the postwar era, and one of the greatest African-American writers of this century. A self-described \"transatlantic commuter\" who spent much of his life in France, Baldwin joined a cosmopolitan sophistication to a fierce engagement with social issues. Early Novels and Stories presents the novels and short stories that established Baldwin's reputation as a writer who fused unblinking realism and rare verbal eloquence. His first novel, Go Tell It on the Mountain (1953), tells the story, rooted in Baldwin's own experience, of a preacher's son coming of age in 1930's Harlem. Giovanni's Room (1956) is a searching, and in its day controversial, treatment of the tragic self-delusions of a young American expatriate at war with his own homosexuality.", "subjects": "American fiction", "page_count": 970, "cover_url": "https://covers.openlibrary.org/b/id/929367-M.jpg", "ol_work": "/works/OL2683334W", "ol_first_year": 1998, "ol_isbn13": "9781883011512", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:09"}, {"id": 3, "spine": "DAVOS MAN / HOW THE BILLIONAIRES DEVOURED THE WORLD / PETER S. GOODMAN / CUSTOM HOUSE", "photo_id": 1, "shelf": "1A", "position": 3, "title": "Davos Man", "subtitle": "How the Billionaires Devoured the World", "authors": "Goodman, Peter S.", "publisher": "Custom House", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": null, "subjects": "Billionaires; Capitalism; Moral and ethical aspects; Wealth; Democracy; Milliardaires; Richesse; Aspect moral", "page_count": 336, "cover_url": "https://covers.openlibrary.org/b/id/10895430-M.jpg", "ol_work": "/works/OL24366782W", "ol_first_year": 2022, "ol_isbn13": "9780063078321", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:11"}, {"id": 4, "spine": "The Relational Self / Upolu Luma Vaai & Unaisi Nabobo-Baba", "photo_id": 1, "shelf": "1A", "position": 4, "title": "The Relational Self", "subtitle": null, "authors": "Vaai, Upolu Luma; Nabobo-Baba, Unaisi", "publisher": null, "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.97, "question": null, "notes": null, "contributor": "TNK", "summary": null, "subjects": null, "page_count": null, "cover_url": null, "ol_work": null, "ol_first_year": null, "ol_isbn13": null, "enrich_source": "none", "enrich_confidence": 0.0, "enriched_at": "2026-09-17 16:49:12"}, {"id": 5, "spine": "LETTERS TO THE SONS OF SOCIETY / SHAKA SENGHOR / CONVERGENT", "photo_id": 1, "shelf": "1A", "position": 5, "title": "Letters to the Sons of Society", "subtitle": null, "authors": "Senghor, Shaka", "publisher": "Convergent", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": null, "subjects": "Sociology; Fathers and sons; African American boys; Psychology; Children of prisoners; African American fathers", "page_count": 240, "cover_url": "https://covers.openlibrary.org/b/id/11224707-M.jpg", "ol_work": "/works/OL24571954W", "ol_first_year": 2022, "ol_isbn13": "9780593238011", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:13"}, {"id": 6, "spine": "Toothpicks & Logos / John Heskett / OXFORD", "photo_id": 1, "shelf": "1A", "position": 6, "title": "Toothpicks & Logos", "subtitle": null, "authors": "Heskett, John", "publisher": "Oxford", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.98, "question": null, "notes": "barcode sticker over part of the spine", "contributor": "TNK", "summary": null, "subjects": "Creative ability in technology; Industrial Design; Methodology; Industriedesign", "page_count": 219, "cover_url": "https://covers.openlibrary.org/b/id/117879-M.jpg", "ol_work": "/works/OL4651248W", "ol_first_year": 2002, "ol_isbn13": "9780192803214", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:15"}, {"id": 7, "spine": "Brown Roediger McDaniel / make it stick / Belknap Harvard", "photo_id": 1, "shelf": "1A", "position": 7, "title": "Make It Stick", "subtitle": null, "authors": "Brown, Peter C.; Roediger, Henry L.; McDaniel, Mark A.", "publisher": "Belknap / Harvard", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "spine gives surnames only; forenames not read off the photo", "contributor": "TNK", "summary": "To most of us, learning something \"the hard way\" implies wasted time and effort. Good teaching, we believe, should be creatively tailored to the different learning styles of students and should use strategies that make learning easier. Make It Stick turns fashionable ideas like these on their head. Drawing on recent discoveries in cognitive psychology and other disciplines, the authors offer concrete techniques for becoming more productive learners. Memory plays a central role in our ability to carry out complex cognitive tasks, such as applying knowledge to problems never before encountered and drawing inferences from facts already known. New insights into how memory is encoded, consolidated, and later retrieved have led to a better understanding of how we learn.", "subjects": "Learning / Research; Learning; Cognition; Study skills; Cognition / Research; Research", "page_count": 336, "cover_url": "https://covers.openlibrary.org/b/id/8188891-M.jpg", "ol_work": "/works/OL17879515W", "ol_first_year": 2014, "ol_isbn13": "9780674419384", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:17"}, {"id": 8, "spine": "Jared Diamond / WHAT CAN WE LEARN FROM TRADITIONAL SOCIETIES? / THE WORLD UNTIL YESTERDAY", "photo_id": 1, "shelf": "1A", "position": 8, "title": "The World Until Yesterday", "subtitle": "What Can We Learn from Traditional Societies?", "authors": "Diamond, Jared", "publisher": "Penguin", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": "penguin colophon on spine", "contributor": "TNK", "summary": "Overview: Most of us take for granted the features of our modern society, from air travel and telecommunications to literacy and obesity. Yet for nearly all of its six million years of existence, human society had none of these things. While the gulf that divides us from our primitive ancestors may seem unbridgeably wide, we can glimpse much of our former lifestyle in those largely traditional societies still or recently in existence. Societies like those of the New Guinea Highlanders remind us that it was only yesterday-in evolutionary time-when everything changed and that we moderns still possess bodies and social practices often better adapted to traditional than to modern conditions.", "subjects": "Social life and customs; Social evolution; Dani (New Guinean people); Cultural assimilation; Social change; History; Anthropology; Social History", "page_count": 552, "cover_url": "https://covers.openlibrary.org/b/id/9293827-M.jpg", "ol_work": "/works/OL16637581W", "ol_first_year": 2012, "ol_isbn13": "9781101606001", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:19"}, {"id": 9, "spine": "NONZERO / THE LOGIC OF HUMAN DESTINY / ROBERT WRIGHT / VINTAGE", "photo_id": 1, "shelf": "1A", "position": 9, "title": "Nonzero", "subtitle": "The Logic of Human Destiny", "authors": "Wright, Robert", "publisher": "Vintage", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": "In his bestselling The Moral Animal, Robert Wright applied the principles of evolutionary biology to the study of the human mind. Now Wright attempts something even more ambitious: explaining the direction of evolution and human history--and discerning where history will lead us next.In Nonzero: The Logic of Human Destiny, Wright asserts that, ever since the primordial ooze, life has followed a basic pattern. Organisms and human societies alike have grown more complex by mastering the challenges of internal cooperation. Wright's narrative ranges from fossilized bacteria to vampire bats, from stone-age villages to the World Trade Organization, uncovering such surprises as the benefits of barbarian hordes and the useful stability of feudalism.", "subjects": "Science; Nonfiction; Human evolution; Social evolution; History; Sociology; History - General History; Civilization", "page_count": 447, "cover_url": "https://covers.openlibrary.org/b/id/6416553-M.jpg", "ol_work": "/works/OL8300064W", "ol_first_year": 2000, "ol_isbn13": "9780679442523", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:21"}, {"id": 10, "spine": "Abu-Lughod / Before European Hegemony", "photo_id": 1, "shelf": "1A", "position": 10, "title": "Before European Hegemony", "subtitle": null, "authors": "Abu-Lughod, Janet L.", "publisher": null, "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.93, "question": null, "notes": "spine gives surname only; used-bookshop sticker, $13.35", "contributor": "TNK", "summary": ">By the end of the thirteenth century the regions of Europe, the Middle East, the Indian Ocean area, and China were becoming integrated--through activities in an archipelago of cities located along major land and sea routes--into a world system of commerce and production, albeit one in which Europe still played a minor role. This book traces the formation of the system and explores how the Black Death, circa 1350, and the subsequent isolation of China under the Ming dynasty interrupted its further development. Abu-Lughod argues that demographic, geographic, and political factors, rather than any unique qualities of Western capitalism or \"personality, \" account for the eventual triumph of \"the West\" during the ensuing period of six hundred years, and suggests that current transformations in the world system may signal the end of this aberrant phase of world history", "subjects": "Economic history; History; International trade; Medieval Cities and towns; Medieval", "page_count": 460, "cover_url": "https://covers.openlibrary.org/b/id/121729-M.jpg", "ol_work": "/works/OL4452576W", "ol_first_year": 1989, "ol_isbn13": "9780195058864", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:23"}, {"id": 11, "spine": "ANGEL KYODO WILLIAMS / being black", "photo_id": 1, "shelf": "1A", "position": 11, "title": "Being Black", "subtitle": null, "authors": "Williams, Angel Kyodo", "publisher": null, "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.98, "question": null, "notes": null, "contributor": "TNK", "summary": "\"Here is a down to earth spiritual handbook for any black American searching for self-acceptance and lasting personal happiness.\"--Jacket.", "subjects": "Spiritual life; Enlightenment (Zen Buddhism); Zen Buddhism; African americans, religion", "page_count": 212, "cover_url": "https://covers.openlibrary.org/b/id/98408-M.jpg", "ol_work": "/works/OL7974141W", "ol_first_year": 2000, "ol_isbn13": "9780670892686", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:25"}, {"id": 12, "spine": "Moore / SOCIAL ORIGINS OF DICTATORSHIP AND DEMOCRACY / BEACON", "photo_id": 1, "shelf": "1A", "position": 12, "title": "Social Origins of Dictatorship and Democracy", "subtitle": null, "authors": "Moore, Barrington", "publisher": "Beacon", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.93, "question": null, "notes": "spine gives surname only", "contributor": "TNK", "summary": null, "subjects": "Politics and government; Economic history; Revolutions; Social history; Social classes; Democracy; Modern; Politics", "page_count": 559, "cover_url": "https://covers.openlibrary.org/b/id/588056-M.jpg", "ol_work": "/works/OL2739790W", "ol_first_year": 1966, "ol_isbn13": "9780140600162", "enrich_source": "openlibrary", "enrich_confidence": 0.85, "enriched_at": "2026-09-17 16:44:26"}, {"id": 13, "spine": "The Cryptopians / Laura Shin / PUBLICAFFAIRS", "photo_id": 2, "shelf": "1B", "position": 1, "title": "The Cryptopians", "subtitle": null, "authors": "Shin, Laura", "publisher": "PublicAffairs", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": null, "subjects": "Cryptocurrencies; History; Money; Finance", "page_count": 400, "cover_url": "https://covers.openlibrary.org/b/id/14687268-M.jpg", "ol_work": "/works/OL25445726W", "ol_first_year": 2022, "ol_isbn13": "9781541763029", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:47:22"}, {"id": 14, "spine": "THE BOOK OF EMBRACES / EDUARDO GALEANO / NORTON", "photo_id": 2, "shelf": "1B", "position": 2, "title": "The Book of Embraces", "subtitle": null, "authors": "Galeano, Eduardo", "publisher": "Norton", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": "The author shares brief anecdotes about life in South America, memories of incidents from his own past, and meditations on reading, literature, and freedom.", "subjects": "South america, fiction; Fiction, general", "page_count": 281, "cover_url": "https://covers.openlibrary.org/b/id/8096148-M.jpg", "ol_work": "/works/OL698133W", "ol_first_year": 1991, "ol_isbn13": "9780393029604", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:29"}, {"id": 15, "spine": "eTrust / COOK SNIJDERS BUSKENS CHESHIRE / RUSSELL SAGE FOUNDATION", "photo_id": 2, "shelf": "1B", "position": 3, "title": "eTrust", "subtitle": null, "authors": "Cook; Snijders; Buskens; Cheshire", "publisher": "Russell Sage Foundation", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.97, "question": null, "notes": "spine gives surnames only", "contributor": "TNK", "summary": null, "subjects": "Electronic commerce; Trust; Public opinion; Consumer confidence", "page_count": 335, "cover_url": "https://covers.openlibrary.org/b/id/9279727-M.jpg", "ol_work": "/works/OL18754775W", "ol_first_year": 2009, "ol_isbn13": "9780871543110", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:47:24"}, {"id": 16, "spine": "WHOM CAN WE TRUST? / COOK LEVI HARDIN / RUSSELL SAGE FOUNDATION", "photo_id": 2, "shelf": "1B", "position": 4, "title": "Whom Can We Trust?", "subtitle": null, "authors": "Cook; Levi; Hardin", "publisher": "Russell Sage Foundation", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.97, "question": null, "notes": "spine gives surnames only", "contributor": "TNK", "summary": null, "subjects": null, "page_count": 360, "cover_url": null, "ol_work": "/works/OL25382499W", "ol_first_year": 2009, "ol_isbn13": "9781610446075", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:32"}, {"id": 17, "spine": "VENKATESH / AMERICAN PROJECT / Harvard", "photo_id": 2, "shelf": "1B", "position": 5, "title": "American Project", "subtitle": null, "authors": "Venkatesh, Sudhir", "publisher": "Harvard", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "spine gives surname only", "contributor": "TNK", "summary": "\"Based on nearly a decade of fieldwork in Chicago's Robert Taylor Homes, American Project is the story of daily life in an American public housing complex. Venkatesh draws on his relationships with tenants, gang members, police officers, and local organizations to offer an intimate portrait of an inner-city community that journalists and the public have viewed only from a distance. Challenging the conventional notion of public housing as a failure, this startling book recreates tenants' thirty-year effort to build a safe and secure neighborhood: their political battles for services from an indifferent city bureaucracy, their daily confrontation with entrenched poverty, their painful decisions about whether to work with or against the street gangs whose drug dealing both sustained and imperiled their lives.\".", "subjects": "Crime in public housing; Housing; African Americans; Robert Taylor Homes; Public housing; Inner cities; Low-income housing; Poor, united states", "page_count": 336, "cover_url": "https://covers.openlibrary.org/b/id/411907-M.jpg", "ol_work": "/works/OL8275355W", "ol_first_year": 2000, "ol_isbn13": "9780670008308", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:33"}, {"id": 18, "spine": "Quigley / Tragedy & Hope / GSG & ASSOCIATES", "photo_id": 2, "shelf": "1B", "position": 6, "title": "Tragedy & Hope", "subtitle": null, "authors": "Quigley, Carroll", "publisher": "GSG & Associates", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "spine gives surname only", "contributor": "TNK", "summary": "TRAGEDY AND HOPE shows the years 1895-1950 as a period of transition from the world dominated by Europe in the nineteenth century to the world of three blocs in the twentieth century. With clarity, perspective, and cumulative impact, Professor Quigley examines the nature of that transition through two world wars and a worldwide economic depression. As an interpretative historian, he tries to show each event in the full complexity of its historical context. The result is a unique work, notable in several ways. It gives a picture of the world in terms of the influence of different cultures and outlooks upon each other; it shows, more completely than in any similar work, the influence of science and technology on human life; and it explains, with unprecedented clarity, how the intricate financial and commercial patterns of the West prior to 1914 influenced the development of today's world.", "subjects": "Modern History; Civilization; History; World history", "page_count": 1348, "cover_url": "https://covers.openlibrary.org/b/id/6391850-M.jpg", "ol_work": "/works/OL5911681W", "ol_first_year": 1966, "ol_isbn13": "9780026001304", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:35"}, {"id": 19, "spine": "WILLIAM H. SEWELL, JR. / LOGICS OF HISTORY / CHICAGO", "photo_id": 2, "shelf": "1B", "position": 7, "title": "Logics of History", "subtitle": null, "authors": "Sewell, William H., Jr.", "publisher": "Chicago", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": null, "subjects": null, "page_count": 376, "cover_url": "https://covers.openlibrary.org/b/id/142938-M.jpg", "ol_work": "/works/OL8320671W", "ol_first_year": 2005, "ol_isbn13": "9780226749174", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:48:07"}, {"id": 20, "spine": "image / Saga / BRIAN K. VAUGHAN / FIONA STAPLES / 7", "photo_id": 2, "shelf": "1B", "position": 8, "title": "Saga", "subtitle": null, "authors": "Vaughan, Brian K.; Staples, Fiona", "publisher": "Image", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "volume number read as 7 from a green numeral at the spine foot, confirmed against the same spine in IMG_2122", "contributor": "TNK", "summary": "At long last, Hazel and her star-crossed family are finally back, and they’ve made some new...friends? This collection features the latest six chapters of the most epic adventure in comics, including the series' double-sized first issue back from hiatus. Collects SAGA #55-60.", "subjects": null, "page_count": 160, "cover_url": "https://covers.openlibrary.org/b/id/15201867-M.jpg", "ol_work": "/works/OL28603656W", "ol_first_year": 2022, "ol_isbn13": "9781534323346", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:38"}, {"id": 22, "spine": "THE PHOTOGRAPHER'S EYE / THE MUSEUM OF MODERN ART, NEW YORK", "photo_id": 2, "shelf": "1B", "position": 9, "title": "The Photographer's Eye", "subtitle": null, "authors": null, "publisher": "The Museum of Modern Art, New York", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.9, "question": null, "notes": "no author printed on the spine; MoMA is the only attribution visible. The stack tilts forward, so this book's black front cover shows above its own spine - the orange serif letter and the photograph on it read as a separate black spine at first pass. Mo confirmed there is no book there.", "contributor": "TNK", "summary": "Una nueva edición del mítico libro de John Szarkowski, que fue fotógrafo y director del departamento de fotografía del Museo de Arte Moderno (MoMA, por sus siglas en inglés) de Nueva York y autor de numerosos libros. *El ojo del fotógrafo* es una introducción al arte de la fotografía que reúne imágenes de respetados maestros y de fotógrafos desconocidos que surgió a partir de una exposición en 1964, y fue publicado por primera vez en 1966. El libro nos acerca al lenguaje fotográfico a través de la obra de grandes maestros como Avedon, Cartier-Bresson, Doisneau, Evans, Frank, Penn, Steichen, Strand o Weston. Investiga las características visuales de las fotografías y las razones que las explican, dividiendo las imágenes en cinco apartados, examinando las alternativas a las que se enfrenta el artista: la cosa en sí, el detalle, el marco, el tiempo y la posición aventajada.", "subjects": "Artistic photography; Photography; Photographs; Composition (photography); History", "page_count": 155, "cover_url": "https://covers.openlibrary.org/b/id/659884-M.jpg", "ol_work": "/works/OL3282582W", "ol_first_year": 1966, "ol_isbn13": "9788874393978", "enrich_source": "openlibrary", "enrich_confidence": 0.85, "enriched_at": "2026-09-17 16:47:28"}, {"id": 23, "spine": "The Social Life of Small Urban Spaces / William H. Whyte / Project for Public Spaces", "photo_id": 2, "shelf": "1B", "position": 10, "title": "The Social Life of Small Urban Spaces", "subtitle": null, "authors": "Whyte, William H.", "publisher": "Project for Public Spaces", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": "shelved upside down", "contributor": "TNK", "summary": null, "subjects": "Public spaces; Pedestrian areas; Open spaces; Social aspects", "page_count": 125, "cover_url": "https://covers.openlibrary.org/b/id/735356-M.jpg", "ol_work": "/works/OL8050242W", "ol_first_year": 2001, "ol_isbn13": "9780970632418", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:41"}, {"id": 24, "spine": "Isaiah Berlin / THE PROPER STUDY OF MANKIND / FARRAR STRAUS GIROUX", "photo_id": 3, "shelf": "1C", "position": 1, "title": "The Proper Study of Mankind", "subtitle": null, "authors": "Berlin, Isaiah", "publisher": "Farrar, Straus and Giroux", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": "\"Isaiah Berlin was one of the leading thinkers of our time and one of its finest writers. The Proper Study of Mankind brings together his most celebrated work, which has appeared in various books (many of them out of print) over the past half century. Here the reader will find Berlin's famous essay on Tolstoy, \"The Hedgehog and the Fox\"; his penetrating portraits of important contemporaries - from Pasternak and Akhmatova to Churchill and Roosevelt; his seminal essays on liberty and his exposition of his most distinctive doctrine - pluralism; his defense of philosophy and history against assimilation to science; and his brilliant studies of intellectual originals such as Machiavelli, Vico, and Herder.\"--BOOK JACKET.", "subjects": "British Philosophy; Philosophy; Political science; Human beings; Philosophical anthropology; History; History, philosophy; Political science, philosophy", "page_count": 667, "cover_url": "https://covers.openlibrary.org/b/id/223357-M.jpg", "ol_work": "/works/OL930388W", "ol_first_year": 1997, "ol_isbn13": "9780099582762", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:42"}, {"id": 25, "spine": "BREACHED! / SOLOVE AND HARTZOG / OXFORD", "photo_id": 3, "shelf": "1C", "position": 2, "title": "Breached!", "subtitle": null, "authors": "Solove, Daniel J.; Hartzog, Woodrow", "publisher": "Oxford", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "spine gives surnames only", "contributor": "TNK", "summary": null, "subjects": null, "page_count": 256, "cover_url": "https://covers.openlibrary.org/b/id/10902647-M.jpg", "ol_work": "/works/OL24372485W", "ol_first_year": 2022, "ol_isbn13": "9780190940553", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:44"}, {"id": 26, "spine": "KATHERINE McKITTRICK / DEAR SCIENCE and Other Stories / DUKE", "photo_id": 3, "shelf": "1C", "position": 3, "title": "Dear Science and Other Stories", "subtitle": null, "authors": "McKittrick, Katherine", "publisher": "Duke", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": null, "subjects": "African Americans; Study and teaching; Social conditions; Race; Philosophy; African American feminists; Cross-cultural studies; United states, history", "page_count": 216, "cover_url": "https://covers.openlibrary.org/b/id/11041803-M.jpg", "ol_work": "/works/OL21683385W", "ol_first_year": 2020, "ol_isbn13": "9781478012573", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:46"}, {"id": 27, "spine": "SAFIR | DUGAN / Street Data / CORWIN", "photo_id": 3, "shelf": "1C", "position": 4, "title": "Street Data", "subtitle": null, "authors": "Safir; Dugan", "publisher": "Corwin", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.97, "question": null, "notes": "spine gives surnames only", "contributor": "TNK", "summary": null, "subjects": null, "page_count": null, "cover_url": null, "ol_work": null, "ol_first_year": null, "ol_isbn13": null, "enrich_source": "none", "enrich_confidence": 0.0, "enriched_at": "2026-09-17 16:49:12"}, {"id": 28, "spine": "FUKUYAMA / TRUS[T] / FREE PRESS", "photo_id": 3, "shelf": "1C", "position": 5, "title": "Trust", "subtitle": null, "authors": "Fukuyama, Francis", "publisher": "Free Press", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.88, "question": null, "notes": "a shop barcode label covers the end of the title; reads TRUS", "contributor": "TNK", "summary": "In Trust, a sweeping assessment of the emerging global economic order \"after History,\" Fukuyama examines a wide range of national cultures in order to divine the hidden principles that make a good and prosperous society, and his findings strongly challenge the orthodoxies of both left and right. In fact, economic life is pervaded by culture and depends, Fukuyama maintains, on moral bonds of social trust. This is the unspoken, unwritten bond between fellow citizens that facilitates transactions, empowers individual creativity, and justifies collective action. In the global struggle for economic predominance that is now upon us - a struggle in which cultural differences will become the chief determinant of national success - the social capital represented by trust will be as important as physical capital.", "subjects": "Commerce; Moral and ethical aspects; Competition, International; International Competition; Economics; Competition; Trust (Psychology); Sociological aspects of Economics", "page_count": 457, "cover_url": "https://covers.openlibrary.org/b/id/18769-M.jpg", "ol_work": "/works/OL2670543W", "ol_first_year": 1995, "ol_isbn13": "9780788192357", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:48"}, {"id": 29, "spine": "Rentier Capitalism / Brett Christophers / VERSO 50", "photo_id": 3, "shelf": "1C", "position": 6, "title": "Rentier Capitalism", "subtitle": null, "authors": "Christophers, Brett", "publisher": "Verso", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": "The United Kingdom of Rentierism In this landmark book, the author of the acclaimed The New Enclosure provides a forensic examination of capitalism as it increasingly exists today in the 'advanced' economies of the Global North. Dominated by institutions and individuals profiting from the control of scarce, revenue-generating assets, Brett Christophers styles this contemporary socioeconomic system 'rentier capitalism', and he critically dissects its emergence, forms and implications. The empirical focus of Rentier Capitalism's critique is the United Kingdom, a country and political economy that today bear all the hallmarks of rentier ascendancy: immense concentration of resources, constrained competition, vast inequalities of income and wealth, and growing economic stagnation.", "subjects": "Economic history; Capitalism; Rent (Economic theory); Economic policy; Economic conditions", "page_count": 512, "cover_url": null, "ol_work": "/works/OL21687455W", "ol_first_year": 2020, "ol_isbn13": "9781788739757", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:50"}, {"id": 30, "spine": "IMMERWAHR / thinking small / Harvard", "photo_id": 3, "shelf": "1C", "position": 7, "title": "Thinking Small", "subtitle": null, "authors": "Immerwahr, Daniel", "publisher": "Harvard", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "spine gives surname only", "contributor": "TNK", "summary": "Daniel Immerwahr tells how the United States sought to rescue the world from poverty through small-scale, community-based approaches. He also sounds a warning: such strategies, now again in vogue, have been tried before, alongside grander moderization schemes--with often disastrous consequences as self-help gave way to crushing local oppression.", "subjects": "Community development, united states; Economic assistance, american; Rural development projects; Community development; History; American Economic assistance", "page_count": 272, "cover_url": null, "ol_work": "/works/OL21545281W", "ol_first_year": 2014, "ol_isbn13": "9780674735835", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:52"}, {"id": 31, "spine": "KILL THE COMPANY / LISA BODELL", "photo_id": 3, "shelf": "1C", "position": 8, "title": "Kill the Company", "subtitle": null, "authors": "Bodell, Lisa", "publisher": null, "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": "publisher shown as a logo only, not spelled out", "contributor": "TNK", "summary": null, "subjects": "Organizational change; Management; Creative ability in business; Technological innovations; Organizational effectiveness; Strategic planning", "page_count": 264, "cover_url": "https://covers.openlibrary.org/b/id/11661184-M.jpg", "ol_work": "/works/OL16717925W", "ol_first_year": 2012, "ol_isbn13": "9781351861540", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:53"}, {"id": 32, "spine": "Handbook of Trust Research / Reinhard Bachmann and Akbar Zaheer / EE", "photo_id": 3, "shelf": "1C", "position": 9, "title": "Handbook of Trust Research", "subtitle": null, "authors": "Bachmann, Reinhard; Zaheer, Akbar", "publisher": "Edward Elgar", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "EE colophon on the spine", "contributor": "TNK", "summary": null, "subjects": "Organizational behavior; Trust; Interpersonal relations; Interorganizational relations; Organizational sociology", "page_count": 448, "cover_url": null, "ol_work": "/works/OL25107881W", "ol_first_year": 2008, "ol_isbn13": "9781847202819", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:55"}, {"id": 33, "spine": "HOW TO TURN A PLACE AROUND / PROJECT FOR PUBLIC SPACES", "photo_id": 3, "shelf": "1C", "position": 10, "title": "How to Turn a Place Around", "subtitle": null, "authors": null, "publisher": "Project for Public Spaces", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "shelved upside down; no author on the spine", "contributor": "TNK", "summary": null, "subjects": null, "page_count": 125, "cover_url": "https://covers.openlibrary.org/b/id/735355-M.jpg", "ol_work": "/works/OL8825933W", "ol_first_year": 2000, "ol_isbn13": "9780970632401", "enrich_source": "openlibrary", "enrich_confidence": 0.85, "enriched_at": "2026-09-17 16:47:29"}, {"id": 34, "spine": "MAROHN / STRONG TOWNS / A BOTTOM-UP REVOLUTION TO REBUILD AMERICAN PROSPERITY / WILEY", "photo_id": 3, "shelf": "1C", "position": 11, "title": "Strong Towns", "subtitle": "A Bottom-Up Revolution to Rebuild American Prosperity", "authors": "Marohn, Charles L., Jr.", "publisher": "Wiley", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.93, "question": null, "notes": "spine gives surname only; subtitle runs vertically and is partly foreshortened", "contributor": "TNK", "summary": "\"Strong Towns: A Bottom-Up Revolution to Build American Prosperity is a book of forward-thinking ideas that breaks with modern wisdom to present a new vision of urban development in the United States. Presenting the foundational ideas of the Strong Towns movement he co-founded, Charles Marohn explains why cities of all sizes continue to struggle to meet their basic needs, and reveals the new paradigm that can solve this longstanding problem.\"--Amazon.", "subjects": "Cities and towns, growth; Sustainable development; Community development, united states; Cities and towns; Growth; Economic aspects; History; City planning", "page_count": 256, "cover_url": "https://covers.openlibrary.org/b/id/15251198-M.jpg", "ol_work": "/works/OL21648599W", "ol_first_year": 2019, "ol_isbn13": "9781665111911", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:48:09"}, {"id": 35, "spine": "PRASAD / GAINING CURRENCY / OXFORD", "photo_id": 4, "shelf": "1D", "position": 1, "title": "Gaining Currency", "subtitle": null, "authors": "Prasad, Eswar S.", "publisher": "Oxford", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "spine gives surname only", "contributor": "TNK", "summary": null, "subjects": "Foreign exchange; Finance, china; China, economic policy", "page_count": 320, "cover_url": null, "ol_work": "/works/OL21138368W", "ol_first_year": 2016, "ol_isbn13": "9780190631055", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:44:59"}, {"id": 36, "spine": "THE EDGE of ISLAM / Janet McIntosh / DUKE", "photo_id": 4, "shelf": "1D", "position": 2, "title": "The Edge of Islam", "subtitle": null, "authors": "McIntosh, Janet", "publisher": "Duke", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": null, "subjects": "Anthropology", "page_count": null, "cover_url": null, "ol_work": "/works/OL45622183W", "ol_first_year": 2002, "ol_isbn13": "9780493557199", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:45:00"}, {"id": 37, "spine": "The Watchman in Pieces / david rosen and aaron santesso / Yale", "photo_id": 4, "shelf": "1D", "position": 3, "title": "The Watchman in Pieces", "subtitle": null, "authors": "Rosen, David; Santesso, Aaron", "publisher": "Yale", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": null, "subjects": null, "page_count": null, "cover_url": null, "ol_work": null, "ol_first_year": null, "ol_isbn13": null, "enrich_source": "none", "enrich_confidence": 0.0, "enriched_at": "2026-09-17 16:49:12"}, {"id": 38, "spine": "THE BATTLE FOR FORTUNE / CHARLENE MAKLEY / STATE-LED DEVELOPMENT, PERSONHOOD, AND POWER AMONG TIBETANS IN CHINA", "photo_id": 4, "shelf": "1D", "position": 4, "title": "The Battle for Fortune", "subtitle": "State-Led Development, Personhood, and Power among Tibetans in China", "authors": "Makley, Charlene", "publisher": null, "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.98, "question": null, "notes": "publisher shown as a logo only", "contributor": "TNK", "summary": null, "subjects": null, "page_count": null, "cover_url": null, "ol_work": null, "ol_first_year": null, "ol_isbn13": null, "enrich_source": "none", "enrich_confidence": 0.0, "enriched_at": "2026-09-17 16:49:12"}, {"id": 39, "spine": "DISTRUST / Hardin / Russell Sage Foundation", "photo_id": 4, "shelf": "1D", "position": 5, "title": "Distrust", "subtitle": null, "authors": "Hardin, Russell", "publisher": "Russell Sage Foundation", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "spine gives surname only", "contributor": "TNK", "summary": null, "subjects": null, "page_count": 344, "cover_url": null, "ol_work": "/works/OL25388971W", "ol_first_year": 2004, "ol_isbn13": "9781610442695", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:45:05"}, {"id": 40, "spine": "A DROP OF MIDNIGHT / JASON DIAKITE", "photo_id": 4, "shelf": "1D", "position": 6, "title": "A Drop of Midnight", "subtitle": null, "authors": "Diakité, Jason", "publisher": null, "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": "publisher shown as a logo only", "contributor": "TNK", "summary": null, "subjects": "Rap musicians, biography; Blacks, biography; Blacks, race identity; Rap musicians; Biography; Blacks; Race identity; Slavery", "page_count": 295, "cover_url": "https://covers.openlibrary.org/b/id/10210052-M.jpg", "ol_work": "/works/OL20883938W", "ol_first_year": 2020, "ol_isbn13": "9781542017077", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:48:45"}, {"id": 41, "spine": "Atul Gawande / Being Mortal / Medicine and What Matters in the End / PICADOR", "photo_id": 4, "shelf": "1D", "position": 7, "title": "Being Mortal", "subtitle": "Medicine and What Matters in the End", "authors": "Gawande, Atul", "publisher": "Picador", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": "Being Mortal: Medicine and What Matters in the End is a 2014 non-fiction book by American surgeon Atul Gawande. The book addresses end-of-life care, hospice care, and also contains Gawande's reflections and personal stories. He suggests that medical care should focus on well-being rather than survival. Being Mortal has won awards, appeared on lists of best books, and been featured in a documentary.", "subjects": "dying; geriatrics; medicine; Activities of Daily Living; Conduct of life; Attitude to Death; Critical care medicine; Terminal care", "page_count": 283, "cover_url": "https://covers.openlibrary.org/b/id/8477368-M.jpg", "ol_work": "/works/OL17079567W", "ol_first_year": 2014, "ol_isbn13": "9781627790550", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:45:08"}, {"id": 42, "spine": "BUBBLE OR REVOLUTION? / MEHTA AGASHE DETROJA", "photo_id": 4, "shelf": "1D", "position": 8, "title": "Bubble or Revolution?", "subtitle": null, "authors": "Mehta; Agashe; Detroja", "publisher": null, "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "spine gives surnames only; publisher is a logo", "contributor": "TNK", "summary": null, "subjects": null, "page_count": 331, "cover_url": "https://covers.openlibrary.org/b/id/10413504-M.jpg", "ol_work": "/works/OL21929918W", "ol_first_year": 2019, "ol_isbn13": "9780578528151", "enrich_source": "openlibrary", "enrich_confidence": 0.85, "enriched_at": "2026-09-17 16:45:11"}, {"id": 43, "spine": "RADICAL DHARMA / williams | Owens | Syedullah / North Atlantic Books", "photo_id": 4, "shelf": "1D", "position": 9, "title": "Radical Dharma", "subtitle": null, "authors": "Williams; Owens; Syedullah", "publisher": "North Atlantic Books", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.97, "question": null, "notes": "shelved upside down; spine gives surnames only", "contributor": "TNK", "summary": null, "subjects": null, "page_count": 404, "cover_url": "https://covers.openlibrary.org/b/id/11062240-M.jpg", "ol_work": "/works/OL24459778W", "ol_first_year": 2017, "ol_isbn13": "9780369361813", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:45:12"}, {"id": 44, "spine": "BENEDICT ANDERSON / IMAGINED COMMUNITIES / VERSO", "photo_id": 4, "shelf": "1D", "position": 10, "title": "Imagined Communities", "subtitle": null, "authors": "Anderson, Benedict", "publisher": "Verso", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": "315 p", "subjects": "Nationalism; History", "page_count": 240, "cover_url": "https://covers.openlibrary.org/b/id/652236-M.jpg", "ol_work": "/works/OL1702855W", "ol_first_year": 1983, "ol_isbn13": "9780805271775", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:45:14"}, {"id": 45, "spine": "THE RHETORIC OF REACTION / HIRSCHMAN / BELKNAP HARVARD", "photo_id": 4, "shelf": "1D", "position": 11, "title": "The Rhetoric of Reaction", "subtitle": null, "authors": "Hirschman, Albert O.", "publisher": "Belknap / Harvard", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 0.95, "question": null, "notes": "shelved upside down; spine gives surname only", "contributor": "TNK", "summary": null, "subjects": "History; Welfare state; Suffrage; Conservatism; Poor laws", "page_count": 197, "cover_url": "https://covers.openlibrary.org/b/id/4021877-M.jpg", "ol_work": "/works/OL10430774W", "ol_first_year": 1991, "ol_isbn13": "9780674768673", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:45:16"}, {"id": 46, "spine": "China in Ten Words / Yu Hua / Anchor Books", "photo_id": 4, "shelf": "1D", "position": 12, "title": "China in Ten Words", "subtitle": null, "authors": "Yu Hua", "publisher": "Anchor Books", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": null, "subjects": null, "page_count": 225, "cover_url": "https://covers.openlibrary.org/b/id/7946116-M.jpg", "ol_work": "/works/OL16414332W", "ol_first_year": 2011, "ol_isbn13": "9780307379351", "enrich_source": "openlibrary", "enrich_confidence": 0.85, "enriched_at": "2026-09-17 16:48:47"}, {"id": 47, "spine": "GALAPAGOS / KURT VONNEGUT / DIAL PRESS", "photo_id": 4, "shelf": "1D", "position": 13, "title": "Galápagos", "subtitle": null, "authors": "Vonnegut, Kurt", "publisher": "Dial Press", "year": null, "edition": null, "isbn13": null, "isbn10": null, "format": null, "language": "en", "series": null, "series_index": null, "status": "unverified", "confidence": 1.0, "question": null, "notes": null, "contributor": "TNK", "summary": "Observed by a ghost of the Vietnam War for one million years, the descendants of survivors of a cruise to the Galapagos Archipielago prove Darwin's Theory of Evolution. The ghost of a shipbuilder tells the story of an ill-fated cruise to the Galapagos Islands.", "subjects": "American Science fiction; Ghost stories; Humorous stories; Satire; Science fiction; Fiction, historical, general; Galapagos Islands in fiction; Islands", "page_count": 295, "cover_url": "https://covers.openlibrary.org/b/id/382381-M.jpg", "ol_work": "/works/OL98471W", "ol_first_year": 1820, "ol_isbn13": "9788410323346", "enrich_source": "openlibrary", "enrich_confidence": 1.0, "enriched_at": "2026-09-17 16:45:18"}], "shelves": [{"shelf": "1", "books": 46, "confirmed": 0, "stacks": 4, "verified": false}], "counts": {"total": 46, "confirmed": 0, "unverified": 46}};
+const BOOKS = DATA.books, SHELVES = DATA.shelves, TARGET = DATA.target;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const where = b => (b.shelf || '?') + (b.position ? '#' + b.position : '');
+/* Two claims are all the page makes about a row: somebody checked it, or
+   nobody has. The db keeps a third state for spines a photo couldn't settle,
+   but that is Moxy's queue, not a status a reader needs to sort through. */
+const verified = b => b.status === 'confirmed';
+const state = b => verified(b) ? 'confirmed' : 'unverified';
+const label = b => verified(b) ? 'Verified' : 'Unverified';
+const nowt = '<span class="t-none">—</span>';
+
+/* ---- awning stripes, sized to the viewport rather than hardcoded ---- */
+const awning = document.querySelector('.awning');
+for (let i = 0; i < 40; i++) awning.appendChild(document.createElement('span'));
+
+/* ---- headline and the 60-cell meter ----------------------------------------
+   The unit is the shelf, not the book. 46 books came off shelf 1, and counting
+   those against 60 read as three-quarters done when the true figure is one
+   shelf in, none of it checked. So the big number counts shelves, and logged
+   and verified are separate states rather than one "on". */
+const loggedShelves = SHELVES.length;
+const doneShelves = SHELVES.filter(s => s.verified).length;
+
+$('count').textContent = loggedShelves;
+$('say').textContent = loggedShelves >= TARGET ? 'all in' : (TARGET - loggedShelves) + ' to go';
+
+const checked = BOOKS.filter(verified).length;
+$('standing').innerHTML = loggedShelves === 0
+  ? 'Nothing photographed yet.'
+  : `<b>${loggedShelves === 1 ? 'Shelf ' + esc(SHELVES[0].shelf) + ' is logged' : loggedShelves + ' shelves logged'}</b>
+     &mdash; ${BOOKS.length} book${BOOKS.length === 1 ? '' : 's'} read off the spines,
+     ${checked === 0 ? 'none of them verified yet' : checked + ' verified'}.
+     A shelf only counts as done once every book on it has been checked.`;
+
+const meter = $('meter');
+for (let i = 0; i < TARGET; i++) {
+  const cell = document.createElement('i');
+  const s = SHELVES[i];
+  if (s) {
+    cell.className = s.verified ? 'verified' : 'logged';
+    cell.title = `Shelf ${s.shelf} \u2014 ${s.books} books, ${s.confirmed} verified`;
+  }
+  meter.appendChild(cell);
+}
+
+/* ---- per-stack counts ---- */
+const stacks = [...new Set(BOOKS.map(b => b.shelf).filter(Boolean))].sort();
+$('stacks').innerHTML = stacks.map(s => {
+  const inStack = BOOKS.filter(b => b.shelf === s);
+  const top = inStack.find(b => b.position === 1);
+  return `<div><dt>Stack ${esc(s)}</dt><dd>${inStack.length}<small>${top ? 'from ' + esc(top.title) : '&nbsp;'}</small></dd></div>`;
+}).join('');
+
+/* ---- filters and sort ---- */
+const RANK = { unverified: 0, confirmed: 1 };
+const cmp = (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+const SORTS = {
+  shelf:  (a, b) => cmp(a.shelf || '', b.shelf || '') || (a.position || 0) - (b.position || 0),
+  title:  (a, b) => cmp(a.title, b.title),
+  author: (a, b) => (a.authors ? 0 : 1) - (b.authors ? 0 : 1)
+                 || cmp(a.authors || '', b.authors || '')
+                 || cmp(a.title, b.title),
+  status: (a, b) => RANK[state(a)] - RANK[state(b)] || cmp(a.title, b.title),
+};
+
+let stackFilter = 'all', query = '', sortKey = 'shelf';
+
+$('chips').innerHTML = ['all', ...stacks].map(s =>
+  `<button class="chip" type="button" data-s="${esc(s)}" aria-pressed="${s === 'all'}">${s === 'all' ? 'All ' + BOOKS.length : esc(s)}</button>`
+).join('');
+$('chips').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  stackFilter = btn.dataset.s;
+  [...$('chips').children].forEach(c => c.setAttribute('aria-pressed', c === btn));
+  draw();
+});
+$('q').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); draw(); });
+$('sort').addEventListener('change', e => { sortKey = e.target.value; draw(); });
+
+/* ---- the list ---- */
+function draw() {
+  const hit = BOOKS.filter(b => {
+    if (stackFilter !== 'all' && b.shelf !== stackFilter) return false;
+    if (!query) return true;
+    return [b.title, b.subtitle, b.authors, b.publisher, b.spine, b.contributor]
+      .filter(Boolean).join(' ').toLowerCase().includes(query);
+  }).sort(SORTS[sortKey]);
+
+  $('rows').innerHTML = hit.map(b => {
+    const meta = [b.authors, b.publisher].filter(Boolean).map(esc).join(' &middot; ');
+  const genre = (b.subjects || '').split(';')[0].trim();
+    return `
+    <div class="lrow" role="row" tabindex="0" data-id="${b.id}">
+      <span class="c-num" role="cell">${esc(where(b))}</span>
+      <span class="c-title" role="cell">${esc(b.title)}${b.subtitle ? `<span class="c-sub">${esc(b.subtitle)}</span>` : ''}${genre ? `<span class="c-tag">${esc(genre)}</span>` : ''}</span>
+      <span class="c-soft" role="cell">${b.authors ? esc(b.authors) : nowt}</span>
+      <span class="c-soft" role="cell">${b.publisher ? esc(b.publisher) : nowt}</span>
+      <span class="c-who" role="cell">${b.contributor ? `<span class="who">${esc(b.contributor)}</span>` : nowt}</span>
+      <span class="c-status" role="cell"><span class="st st-${state(b)}">${label(b)}</span></span>
+      <span class="c-meta" aria-hidden="true">${b.contributor ? `<span class="who">${esc(b.contributor)}</span>` : ''}${meta || ''}</span>
+    </div>`;
+  }).join('');
+
+  $('empty').hidden = hit.length > 0;
+  $('resline').textContent = query || stackFilter !== 'all'
+    ? hit.length + (hit.length === 1 ? ' match' : ' matches')
+    : hit.length + ' books catalogued';
+}
+
+function pick(el) {
+  const row = el.closest('.lrow');
+  if (!row || row.classList.contains('lhead')) return;
+  open(BOOKS.find(b => b.id === Number(row.dataset.id)));
+}
+$('rows').addEventListener('click', e => pick(e.target));
+$('rows').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault();
+  pick(e.target);
+});
+
+/* ---- the record ---- */
+const dlg = $('dlg');
+function open(b) {
+  if (!b) return;
+  $('d-title').textContent = b.title;
+  $('d-sub').textContent = [b.subtitle, b.authors].filter(Boolean).join(' · ') || 'Shelf 1';
+
+  const line = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : '';
+  const blank = (k) => `<dt>${k}</dt><dd>${nowt}</dd>`;
+  const subjects = (b.subjects || '').split(';').map(t => t.trim()).filter(Boolean);
+  const source = b.enrich_source === 'none' ? '' : (b.enrich_source || '');
+
+  $('d-sum').innerHTML = b.summary
+    ? `${esc(b.summary)}<cite>From ${esc(source || 'a catalogue record')}, not from the photograph</cite>`
+    : '';
+  $('d-sum').hidden = !b.summary;
+
+  $('d-fields').innerHTML = [
+    `<dt>On the spine</dt><dd class="spine">${esc(b.spine || '—')}</dd>`,
+    line('Where', esc(where(b))),
+    line('Contributor', `<span class="who">${esc(b.contributor || '')}</span>`),
+    line('Publisher', esc(b.publisher || '')),
+    b.year ? line('Year', b.year) : blank('Year'),
+    b.isbn13 || b.isbn10 ? line('ISBN', esc(b.isbn13 || b.isbn10)) : blank('ISBN'),
+    line('Edition', esc(b.edition || '')),
+    line('Format', esc(b.format || '')),
+    line('Series', [b.series, b.series_index].filter(Boolean).map(esc).join(' ')),
+    subjects.length ? line('Genre', `<span class="tags">${subjects.map(t => `<span>${esc(t)}</span>`).join('')}</span>`) : '',
+    b.ol_first_year ? line('First published', b.ol_first_year + ' <small>(the work, not this copy)</small>') : '',
+    b.page_count ? line('Pages', b.page_count) : '',
+    line('Status', `<span class="st st-${state(b)}">${label(b)}</span>`),
+    b.confidence != null ? line('Spine read', Math.round(b.confidence * 100) + '% sure of the letters') : '',
+    line('Question', b.question ? esc(b.question) : ''),
+    line('Note', b.notes ? esc(b.notes) : ''),
+  ].join('');
+
+  dlg.showModal();
+}
+$('d-close').addEventListener('click', () => dlg.close());
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+draw();
+
+/* Keep the column header sitting exactly under the toolbar. A ResizeObserver
+   rather than a one-off measurement, because the chips rewrap when the phone
+   turns and the search field grows a clear button as you type. */
+const bar = document.querySelector('.toolbar');
+const stick = () => document.documentElement.style.setProperty(
+  '--stick', Math.round(bar.getBoundingClientRect().height) + 'px');
+stick();
+if (window.ResizeObserver) new ResizeObserver(stick).observe(bar);
+else addEventListener('resize', stick);
+</script>

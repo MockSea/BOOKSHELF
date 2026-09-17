@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""Second pass for books the field search missed.
+
+Open Library's `title=`/`author=` parameters are exact-ish; a compound author
+string ("Cook; Snijders; Buskens") or a suffix ("Sewell, William H., Jr.")
+sinks the query even when the book is plainly in the index. Free-text `q=`
+finds those. The match test is unchanged, so a looser query does not mean a
+looser standard for what counts as the same book.
+"""
+
+import sqlite3, sys, time
+from pathlib import Path
+import urllib.parse
+
+# `enrich` has no .py suffix, so it needs the loader named outright.
+from importlib.machinery import SourceFileLoader
+E = SourceFileLoader("enrich", str(Path(__file__).resolve().parent / "enrich")).load_module()
+
+
+def freetext(book):
+    q = urllib.parse.urlencode({
+        # Raw author text, not the normalised surnames: normalising strips the
+        # accent off "Diakité" and Open Library then finds nothing.
+        "q": f'{book["title"]} {(book["authors"] or "").replace(";", " ")}'.strip(),
+        "limit": 8,
+        "fields": "key,title,author_name,first_publish_year,isbn,subject,"
+                  "publisher,number_of_pages_median,cover_i",
+    })
+    data = E.get(f"https://openlibrary.org/search.json?{q}")
+    if not data:
+        return None
+
+    best, best_score = None, 0.0
+    for doc in data.get("docs", []):
+        ts = E.title_score(book["title"], doc.get("title"))
+        if ts == 0:
+            continue
+        ok = E.author_ok(book["authors"], doc.get("author_name") or [])
+        if ok is False:
+            continue
+        score = ts - (0.15 if ok is None else 0.0)
+        if score > best_score:
+            best, best_score = doc, score
+
+    if not best:
+        return None
+    isbns = [i for i in (best.get("isbn") or []) if len(i) == 13]
+    return {
+        "score": round(best_score, 2),
+        "ol_work": best.get("key"),
+        "ol_first_year": best.get("first_publish_year"),
+        "ol_isbn13": isbns[0] if isbns else None,
+        "subjects": (best.get("subject") or [])[:60],
+        "page_count": best.get("number_of_pages_median"),
+        "cover_url": (f"https://covers.openlibrary.org/b/id/{best['cover_i']}-M.jpg"
+                      if best.get("cover_i") else None),
+    }
+
+
+def main():
+    con = sqlite3.connect(E.DB)
+    con.row_factory = sqlite3.Row
+    rows = con.execute(
+        "SELECT id, title, subtitle, authors, publisher FROM books "
+        "WHERE enrich_source = 'none' OR enriched_at IS NULL ORDER BY id").fetchall()
+
+    print(f"{len(rows)} to retry\n")
+    found = 0
+    for b in rows:
+        book = dict(b)
+        print(f"[{book['id']:>3}] {book['title'][:52]}")
+        ol = freetext(book); time.sleep(E.PAUSE)
+        if not ol:
+            print("      still nothing\n")
+            continue
+
+        summary = E.clamp(E.ol_description(ol["ol_work"])); time.sleep(E.PAUSE)
+        subjects = E.tidy_subjects(ol["subjects"])
+        con.execute(
+            """UPDATE books SET
+                 summary=?, subjects=?, page_count=?, cover_url=?,
+                 ol_work=?, ol_first_year=?, ol_isbn13=?,
+                 enrich_source='openlibrary', enrich_confidence=?,
+                 enriched_at=datetime('now')
+               WHERE id=?""",
+            (summary, "; ".join(subjects) or None, ol["page_count"],
+             ol["cover_url"], ol["ol_work"], ol["ol_first_year"],
+             ol["ol_isbn13"], ol["score"], book["id"]))
+        con.commit()
+        found += 1
+        print(f"      openlibrary @ {ol['score']} | {len(subjects)} subjects | "
+              f"{'summary' if summary else 'no summary'}\n")
+
+    con.close()
+    print(f"done: {found} of {len(rows)} recovered")
+
+
+if __name__ == "__main__":
+    main()

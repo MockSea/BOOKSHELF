@@ -1,0 +1,755 @@
+<title>BOOKSHELF</title>
+
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Archivo:wdth,wght@62..125,400..800&family=Caveat+Brush&display=swap">
+
+<style>
+  :root {
+    --blue:      #1E4BD6;
+    --blue-deep: #12318F;
+    --yellow:    #FFC425;
+    --red:       #E8412A;
+    --paper:     #FBF5E9;
+    --paper-2:   #F2EADA;
+    --ink:       #16181F;
+    --ink-soft:  #4E5464;
+    --rule:      #E2DCCE;
+
+    --display: 'Bowlby One', 'Arial Black', sans-serif;
+    --body: 'Archivo', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    --hand: 'Caveat Brush', 'Bradley Hand', cursive;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 18px; }
+
+  /* ---------------------------------------------------------------- hero */
+  .hero {
+    background: var(--blue);
+    color: #fff;
+    border-bottom: 6px solid var(--ink);
+  }
+  .hero .wrap { padding-block: 30px 26px; }
+
+  /* Bowlby One sets wide: at 390px the old clamp(52px, 15vw) plus the skew and
+     the two offset shadows measured past the gutter. 11.5vw keeps the whole
+     stack, shadows included, inside .wrap down to 320px. */
+  .wordmark {
+    font-family: var(--display);
+    font-size: clamp(34px, 11.5vw, 128px);
+    line-height: .92;
+    letter-spacing: .005em;
+    color: var(--yellow);
+    text-shadow:
+      .028em .034em 0 var(--red),
+      .056em .068em 0 var(--blue-deep);
+    transform: skewX(-5deg);
+    transform-origin: left bottom;
+    margin: 0;
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .kicker {
+    font-family: var(--body);
+    font-variation-settings: 'wdth' 118, 'wght' 700;
+    font-size: 12px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    margin: 0 0 12px;
+  }
+
+  .standing {
+    margin: 0 0 14px;
+    max-width: 46ch;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: #DCE5FF;
+  }
+  .standing b { color: #fff; font-variation-settings: 'wght' 700; }
+
+  .blurb {
+    max-width: 44ch;
+    margin: 16px 0 0;
+    font-size: 15.5px;
+    color: #E4EBFF;
+  }
+
+  /* --------------------------------------------------------------- meter */
+  .tally {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+  }
+  .tally .big {
+    font-family: var(--display);
+    font-size: clamp(38px, 9vw, 64px);
+    line-height: 1;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .tally .of {
+    font-family: var(--display);
+    font-size: clamp(19px, 4vw, 28px);
+    color: var(--yellow);
+  }
+  .tally .say {
+    font-family: var(--hand);
+    font-size: 22px;
+    color: #BFD0FF;
+    transform: rotate(-1.5deg);
+  }
+
+  /* One cell per shelf, 60 of them. Sixty in one row needs ~5px each; below
+     720px they fold to 20 a row so a cell stays a readable block. */
+  .meter {
+    display: grid;
+    grid-template-columns: repeat(60, 1fr);
+    gap: 3px;
+    margin-top: 14px;
+    padding: 9px;
+    background: var(--blue-deep);
+    border: 3px solid var(--ink);
+  }
+  .meter i {
+    display: block;
+    height: 34px;
+    background: rgba(255,255,255,.14);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.22);
+  }
+  /* Logged and verified are different claims, so they get different fills: a
+     hatched cell says a shelf was read off the spines, a solid one says
+     somebody checked it. Conflating them made 46 look like progress. */
+  .meter i.logged {
+    background: repeating-linear-gradient(
+      -45deg, var(--yellow) 0 3px, var(--blue-deep) 3px 6px);
+    box-shadow: inset 0 0 0 2px var(--yellow);
+  }
+  .meter i.verified { background: var(--yellow); box-shadow: none; }
+
+  .meterkey {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 11.5px;
+    font-variation-settings: 'wdth' 112, 'wght' 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #C6D4FF;
+  }
+  .meterkey span { display: inline-flex; align-items: center; gap: 7px; }
+  .meterkey b { width: 13px; height: 13px; display: block; flex: none; }
+
+  /* ------------------------------------------------------------- stripes */
+  .awning { display: flex; height: 14px; }
+  .awning span { flex: 1; }
+  .awning span:nth-child(odd)  { background: var(--red); }
+  .awning span:nth-child(even) { background: var(--paper-2); }
+
+  /* --------------------------------------------------------------- stacks */
+  .stacks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0;
+    margin: 0;
+    border: 3px solid var(--ink);
+    border-top: 0;
+    background: var(--paper-2);
+  }
+  .stacks div {
+    padding: 13px 15px;
+    border-right: 3px solid var(--ink);
+    min-width: 0;
+  }
+  .stacks div:last-child { border-right: 0; }
+  .stacks dt {
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 110, 'wght' 700;
+    color: var(--blue);
+    margin: 0 0 2px;
+  }
+  .stacks dd {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 25px;
+    line-height: 1.1;
+  }
+  .stacks small {
+    display: block;
+    font-family: var(--body);
+    font-size: 12.5px;
+    font-variation-settings: 'wght' 500;
+    color: var(--ink-soft);
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+  }
+
+  /* -------------------------------------------------------------- toolbar */
+  /* Search, sort and the stack chips stay on screen through all 46 rows,
+     and the column header pins directly beneath them. --stick is the
+     toolbar's own height, measured at runtime, because the chips wrap at
+     phone width and no fixed number survives that. */
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--paper);
+    padding-block: 14px 10px;
+    margin-top: 12px;
+    border-bottom: 3px solid var(--ink);
+  }
+  .toolrow {
+    display: flex;
+    gap: 9px;
+    align-items: stretch;
+  }
+  .search {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    font-variation-settings: 'wght' 500;
+    padding: 10px 12px;
+    border: 3px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    border-radius: 0;
+    -webkit-appearance: none;
+  }
+  .search::placeholder { color: #8A90A0; }
+  .search:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+  .sort {
+    flex: 0 0 auto;
+    max-width: 44%;
+    font: inherit;
+    font-size: 13px;
+    font-variation-settings: 'wdth' 104, 'wght' 700;
+    padding: 10px 11px;
+    border: 3px solid var(--ink);
+    background: var(--yellow);
+    color: var(--ink);
+    border-radius: 0;
+    cursor: pointer;
+  }
+  .sort:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+  .chip {
+    font: inherit;
+    font-size: 12.5px;
+    font-variation-settings: 'wdth' 106, 'wght' 700;
+    letter-spacing: .04em;
+    padding: 7px 11px;
+    border: 3px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { background: var(--yellow); }
+  .chip:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+  .resline {
+    margin: 10px 0 0;
+    font-size: 11.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 110, 'wght' 700;
+    color: var(--blue);
+  }
+
+  /* ----------------------------------------------------------------- list */
+  .list {
+    --cols: 60px minmax(0, 2.3fr) minmax(0, 1.5fr) minmax(0, 1.4fr) 116px 124px;
+    border: 3px solid var(--ink);
+    border-top: 0;
+    background: #fff;
+  }
+
+  .lrow {
+    display: grid;
+    grid-template-columns: var(--cols);
+    gap: 0 12px;
+    align-items: start;
+    padding: 11px 13px;
+    border-top: 2px solid var(--rule);
+  }
+
+  .lhead {
+    position: sticky;
+    top: var(--stick, 0px);
+    z-index: 2;
+    border-top: 0;
+    align-items: center;
+    background: var(--blue);
+    color: #fff;
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 110, 'wght' 700;
+    padding-block: 10px;
+  }
+
+  .lbody .lrow { cursor: pointer; }
+  .lbody .lrow:nth-child(even) { background: #FCFAF4; }
+  .lbody .lrow:hover { background: var(--yellow); }
+  .lbody .lrow:focus-visible { background: var(--yellow); outline: 3px solid var(--blue); outline-offset: -3px; }
+
+  .c-num {
+    font-variation-settings: 'wdth' 88, 'wght' 700;
+    font-size: 12.5px;
+    color: var(--blue);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    padding-top: 1px;
+  }
+  .c-title { font-variation-settings: 'wght' 700; min-width: 0; overflow-wrap: anywhere; }
+  .c-sub { display: block; font-variation-settings: 'wght' 400; font-size: 12.5px; color: var(--ink-soft); }
+  .c-soft { color: var(--ink-soft); font-size: 13.5px; min-width: 0; overflow-wrap: anywhere; }
+  .c-meta { display: none; }
+  .t-none { color: #A9AEBC; }
+
+  .who {
+    display: inline-block;
+    font-size: 11.5px;
+    letter-spacing: .08em;
+    font-variation-settings: 'wdth' 108, 'wght' 700;
+    padding: 3px 8px;
+    background: var(--blue);
+    color: #fff;
+  }
+
+  .st {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 104, 'wght' 700;
+    padding: 3px 7px;
+    border: 2px solid var(--ink);
+    white-space: nowrap;
+  }
+  .st-confirmed   { background: var(--yellow); }
+  .st-unverified {
+    background: none;
+    border-color: transparent;
+    color: #8F95A4;
+    padding-inline: 0;
+  }
+
+  /* Genre and blurb come from a catalogue lookup, not from the photograph, so
+     they are set apart from the spine reading rather than mixed into it. */
+  .c-tag {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 106, 'wght' 600;
+    color: #8F95A4;
+  }
+  .m-sum {
+    margin: 0 0 4px;
+    padding: 13px 15px;
+    background: var(--paper-2);
+    border-left: 5px solid var(--blue);
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .m-sum cite {
+    display: block;
+    margin-top: 8px;
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #8F95A4;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tags span {
+    font-size: 11.5px;
+    padding: 2px 7px;
+    border: 2px solid var(--rule);
+    background: var(--paper);
+  }
+
+  .empty {
+    padding: 26px 14px;
+    text-align: center;
+    color: var(--ink-soft);
+    border: 3px solid var(--ink);
+    border-top: 0;
+    background: #fff;
+  }
+
+  /* --------------------------------------------------------------- record */
+  dialog {
+    border: 4px solid var(--ink);
+    padding: 0;
+    max-width: 560px;
+    width: calc(100% - 32px);
+    max-height: calc(100% - 32px);
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(18,49,143,.6); }
+  .m-head { background: var(--blue); color: #fff; padding: 17px 20px; }
+  .m-head h2 {
+    font-family: var(--display);
+    font-size: clamp(19px, 5.4vw, 24px);
+    line-height: 1.12;
+    margin: 0;
+    color: var(--yellow);
+    overflow-wrap: anywhere;
+  }
+  .m-head p { margin: 6px 0 0; font-size: 13.5px; color: #DCE5FF; }
+  .m-body { padding: 17px 20px 22px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .m-body dl { margin: 0; display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 9px 14px; }
+  .m-body dt {
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 108, 'wght' 700;
+    color: var(--blue);
+    padding-top: 3px;
+  }
+  .m-body dd { margin: 0; font-size: 14.5px; min-width: 0; overflow-wrap: anywhere; }
+  .spine {
+    font-variation-settings: 'wdth' 92, 'wght' 500;
+    background: #fff;
+    border-left: 4px solid var(--red);
+    padding: 7px 10px;
+    font-size: 13.5px;
+  }
+  .m-acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 20px; }
+  .m-close {
+    font: inherit;
+    font-variation-settings: 'wdth' 108, 'wght' 700;
+    font-size: 13px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 11px 16px;
+    border: 3px solid var(--ink);
+    cursor: pointer;
+  }
+  .m-close { background: var(--yellow); color: var(--ink); }
+  .m-close:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+
+  /* ------------------------------------------------------------ phone */
+  /* One DOM, two layouts. On a phone the six-column sheet becomes a track
+     list: where it sits, the title, its state, and everything else folded
+     into one secondary line underneath. Hiding the middle cells takes them
+     out of grid flow entirely, which is why three tracks is the whole
+     template here. */
+  @media (max-width: 720px) {
+    .meter { grid-template-columns: repeat(20, 1fr); }
+    .meter i { height: 22px; }
+
+    .stacks div { border-right: 0; border-bottom: 3px solid var(--ink); }
+    .stacks div:last-child { border-bottom: 0; }
+
+    .list { --cols: 44px minmax(0, 1fr) auto; }
+    .lrow { padding: 12px; gap: 0 10px; }
+    .c-soft,
+    .c-who,
+    .c-tag,
+    .lhead span:nth-child(3),
+    .lhead span:nth-child(4),
+    .lhead span:nth-child(5) { display: none; }
+    .c-meta {
+      display: block;
+      grid-column: 2 / -1;
+      margin-top: 4px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+      overflow-wrap: anywhere;
+    }
+    .c-meta .who { margin-right: 7px; }
+    .c-status { justify-self: end; align-self: start; }
+
+    .m-body dl { grid-template-columns: 1fr; gap: 3px; }
+    .m-body dd + dt { margin-top: 10px; }
+
+    /* Pinned, the toolbar is permanently spending screen, so it gets tighter
+       here than it needs to be on a desktop where it only costs once. */
+    .toolbar { padding-block: 10px 7px; margin-top: 10px; }
+    .chips { margin-top: 7px; gap: 5px; }
+    .chip { padding: 6px 9px; }
+    .resline { margin-top: 7px; font-size: 11px; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lbody .lrow { transition: background .12s ease; }
+  }
+</style>
+
+<div class="hero">
+  <div class="wrap">
+    <p class="kicker">Shelf one, read off the spines</p>
+    <h1 class="wordmark">BOOKSHELF</h1>
+    <p class="blurb">Photographs go in, rows come out. Every row records what was actually printed on the spine, and whether anyone has checked it since.</p>
+
+    <div class="tally">
+      <span class="big" id="count">0</span>
+      <span class="of">of 60 shelves</span>
+      <span class="say" id="say"></span>
+    </div>
+
+    <p class="standing" id="standing"></p>
+
+    <div class="meter" id="meter" aria-hidden="true"></div>
+    <div class="meterkey">
+      <span><b style="background:repeating-linear-gradient(-45deg,#FFC425 0 3px,#12318F 3px 6px);box-shadow:inset 0 0 0 2px #FFC425"></b> Logged, not verified</span>
+      <span><b style="background:#FFC425"></b> Verified</span>
+      <span><b style="background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></b> Not photographed</span>
+    </div>
+  </div>
+</div>
+
+<div class="awning" aria-hidden="true"></div>
+
+<div class="wrap">
+  <dl class="stacks" id="stacks"></dl>
+
+  <div class="toolbar">
+    <div class="toolrow">
+      <input class="search" id="q" type="search" placeholder="Search title, author, publisher, spine" aria-label="Search the catalog">
+      <select class="sort" id="sort" aria-label="Sort the catalog">
+        <option value="shelf">Shelf order</option>
+        <option value="title">Title A–Z</option>
+        <option value="author">Author A–Z</option>
+        <option value="status">Unverified first</option>
+      </select>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filter by stack"></div>
+    <p class="resline" id="resline"></p>
+  </div>
+
+  <div class="list" role="table" aria-label="Catalogued books">
+    <div class="lrow lhead" role="row">
+      <span role="columnheader">Where</span>
+      <span role="columnheader">Title</span>
+      <span role="columnheader">Author</span>
+      <span role="columnheader">Publisher</span>
+      <span role="columnheader">Contributor</span>
+      <span role="columnheader">Status</span>
+    </div>
+    <div class="lbody" id="rows" role="rowgroup"></div>
+  </div>
+  <p class="empty" id="empty" hidden>Nothing matches that.</p>
+
+</div>
+
+<dialog id="dlg">
+  <div class="m-head">
+    <h2 id="d-title"></h2>
+    <p id="d-sub"></p>
+  </div>
+  <div class="m-body">
+    <p class="m-sum" id="d-sum" hidden></p>
+    <dl id="d-fields"></dl>
+    <div class="m-acts">
+      <button class="m-close" id="d-close" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const DATA = /*DATA*/;
+const BOOKS = DATA.books, SHELVES = DATA.shelves, TARGET = DATA.target;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const where = b => (b.shelf || '?') + (b.position ? '#' + b.position : '');
+/* Two claims are all the page makes about a row: somebody checked it, or
+   nobody has. The db keeps a third state for spines a photo couldn't settle,
+   but that is Moxy's queue, not a status a reader needs to sort through. */
+const verified = b => b.status === 'confirmed';
+const state = b => verified(b) ? 'confirmed' : 'unverified';
+const label = b => verified(b) ? 'Verified' : 'Unverified';
+const nowt = '<span class="t-none">—</span>';
+
+/* ---- awning stripes, sized to the viewport rather than hardcoded ---- */
+const awning = document.querySelector('.awning');
+for (let i = 0; i < 40; i++) awning.appendChild(document.createElement('span'));
+
+/* ---- headline and the 60-cell meter ----------------------------------------
+   The unit is the shelf, not the book. 46 books came off shelf 1, and counting
+   those against 60 read as three-quarters done when the true figure is one
+   shelf in, none of it checked. So the big number counts shelves, and logged
+   and verified are separate states rather than one "on". */
+const loggedShelves = SHELVES.length;
+const doneShelves = SHELVES.filter(s => s.verified).length;
+
+$('count').textContent = loggedShelves;
+$('say').textContent = loggedShelves >= TARGET ? 'all in' : (TARGET - loggedShelves) + ' to go';
+
+const checked = BOOKS.filter(verified).length;
+$('standing').innerHTML = loggedShelves === 0
+  ? 'Nothing photographed yet.'
+  : `<b>${loggedShelves === 1 ? 'Shelf ' + esc(SHELVES[0].shelf) + ' is logged' : loggedShelves + ' shelves logged'}</b>
+     &mdash; ${BOOKS.length} book${BOOKS.length === 1 ? '' : 's'} read off the spines,
+     ${checked === 0 ? 'none of them verified yet' : checked + ' verified'}.
+     A shelf only counts as done once every book on it has been checked.`;
+
+const meter = $('meter');
+for (let i = 0; i < TARGET; i++) {
+  const cell = document.createElement('i');
+  const s = SHELVES[i];
+  if (s) {
+    cell.className = s.verified ? 'verified' : 'logged';
+    cell.title = `Shelf ${s.shelf} \u2014 ${s.books} books, ${s.confirmed} verified`;
+  }
+  meter.appendChild(cell);
+}
+
+/* ---- per-stack counts ---- */
+const stacks = [...new Set(BOOKS.map(b => b.shelf).filter(Boolean))].sort();
+$('stacks').innerHTML = stacks.map(s => {
+  const inStack = BOOKS.filter(b => b.shelf === s);
+  const top = inStack.find(b => b.position === 1);
+  return `<div><dt>Stack ${esc(s)}</dt><dd>${inStack.length}<small>${top ? 'from ' + esc(top.title) : '&nbsp;'}</small></dd></div>`;
+}).join('');
+
+/* ---- filters and sort ---- */
+const RANK = { unverified: 0, confirmed: 1 };
+const cmp = (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+const SORTS = {
+  shelf:  (a, b) => cmp(a.shelf || '', b.shelf || '') || (a.position || 0) - (b.position || 0),
+  title:  (a, b) => cmp(a.title, b.title),
+  author: (a, b) => (a.authors ? 0 : 1) - (b.authors ? 0 : 1)
+                 || cmp(a.authors || '', b.authors || '')
+                 || cmp(a.title, b.title),
+  status: (a, b) => RANK[state(a)] - RANK[state(b)] || cmp(a.title, b.title),
+};
+
+let stackFilter = 'all', query = '', sortKey = 'shelf';
+
+$('chips').innerHTML = ['all', ...stacks].map(s =>
+  `<button class="chip" type="button" data-s="${esc(s)}" aria-pressed="${s === 'all'}">${s === 'all' ? 'All ' + BOOKS.length : esc(s)}</button>`
+).join('');
+$('chips').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  stackFilter = btn.dataset.s;
+  [...$('chips').children].forEach(c => c.setAttribute('aria-pressed', c === btn));
+  draw();
+});
+$('q').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); draw(); });
+$('sort').addEventListener('change', e => { sortKey = e.target.value; draw(); });
+
+/* ---- the list ---- */
+function draw() {
+  const hit = BOOKS.filter(b => {
+    if (stackFilter !== 'all' && b.shelf !== stackFilter) return false;
+    if (!query) return true;
+    return [b.title, b.subtitle, b.authors, b.publisher, b.spine, b.contributor]
+      .filter(Boolean).join(' ').toLowerCase().includes(query);
+  }).sort(SORTS[sortKey]);
+
+  $('rows').innerHTML = hit.map(b => {
+    const meta = [b.authors, b.publisher].filter(Boolean).map(esc).join(' &middot; ');
+  const genre = (b.subjects || '').split(';')[0].trim();
+    return `
+    <div class="lrow" role="row" tabindex="0" data-id="${b.id}">
+      <span class="c-num" role="cell">${esc(where(b))}</span>
+      <span class="c-title" role="cell">${esc(b.title)}${b.subtitle ? `<span class="c-sub">${esc(b.subtitle)}</span>` : ''}${genre ? `<span class="c-tag">${esc(genre)}</span>` : ''}</span>
+      <span class="c-soft" role="cell">${b.authors ? esc(b.authors) : nowt}</span>
+      <span class="c-soft" role="cell">${b.publisher ? esc(b.publisher) : nowt}</span>
+      <span class="c-who" role="cell">${b.contributor ? `<span class="who">${esc(b.contributor)}</span>` : nowt}</span>
+      <span class="c-status" role="cell"><span class="st st-${state(b)}">${label(b)}</span></span>
+      <span class="c-meta" aria-hidden="true">${b.contributor ? `<span class="who">${esc(b.contributor)}</span>` : ''}${meta || ''}</span>
+    </div>`;
+  }).join('');
+
+  $('empty').hidden = hit.length > 0;
+  $('resline').textContent = query || stackFilter !== 'all'
+    ? hit.length + (hit.length === 1 ? ' match' : ' matches')
+    : hit.length + ' books catalogued';
+}
+
+function pick(el) {
+  const row = el.closest('.lrow');
+  if (!row || row.classList.contains('lhead')) return;
+  open(BOOKS.find(b => b.id === Number(row.dataset.id)));
+}
+$('rows').addEventListener('click', e => pick(e.target));
+$('rows').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault();
+  pick(e.target);
+});
+
+/* ---- the record ---- */
+const dlg = $('dlg');
+function open(b) {
+  if (!b) return;
+  $('d-title').textContent = b.title;
+  $('d-sub').textContent = [b.subtitle, b.authors].filter(Boolean).join(' · ') || 'Shelf 1';
+
+  const line = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : '';
+  const blank = (k) => `<dt>${k}</dt><dd>${nowt}</dd>`;
+  const subjects = (b.subjects || '').split(';').map(t => t.trim()).filter(Boolean);
+  const source = b.enrich_source === 'none' ? '' : (b.enrich_source || '');
+
+  $('d-sum').innerHTML = b.summary
+    ? `${esc(b.summary)}<cite>From ${esc(source || 'a catalogue record')}, not from the photograph</cite>`
+    : '';
+  $('d-sum').hidden = !b.summary;
+
+  $('d-fields').innerHTML = [
+    `<dt>On the spine</dt><dd class="spine">${esc(b.spine || '—')}</dd>`,
+    line('Where', esc(where(b))),
+    line('Contributor', `<span class="who">${esc(b.contributor || '')}</span>`),
+    line('Publisher', esc(b.publisher || '')),
+    b.year ? line('Year', b.year) : blank('Year'),
+    b.isbn13 || b.isbn10 ? line('ISBN', esc(b.isbn13 || b.isbn10)) : blank('ISBN'),
+    line('Edition', esc(b.edition || '')),
+    line('Format', esc(b.format || '')),
+    line('Series', [b.series, b.series_index].filter(Boolean).map(esc).join(' ')),
+    subjects.length ? line('Genre', `<span class="tags">${subjects.map(t => `<span>${esc(t)}</span>`).join('')}</span>`) : '',
+    b.ol_first_year ? line('First published', b.ol_first_year + ' <small>(the work, not this copy)</small>') : '',
+    b.page_count ? line('Pages', b.page_count) : '',
+    line('Status', `<span class="st st-${state(b)}">${label(b)}</span>`),
+    b.confidence != null ? line('Spine read', Math.round(b.confidence * 100) + '% sure of the letters') : '',
+    line('Question', b.question ? esc(b.question) : ''),
+    line('Note', b.notes ? esc(b.notes) : ''),
+  ].join('');
+
+  dlg.showModal();
+}
+$('d-close').addEventListener('click', () => dlg.close());
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+draw();
+
+/* Keep the column header sitting exactly under the toolbar. A ResizeObserver
+   rather than a one-off measurement, because the chips rewrap when the phone
+   turns and the search field grows a clear button as you type. */
+const bar = document.querySelector('.toolbar');
+const stick = () => document.documentElement.style.setProperty(
+  '--stick', Math.round(bar.getBoundingClientRect().height) + 'px');
+stick();
+if (window.ResizeObserver) new ResizeObserver(stick).observe(bar);
+else addEventListener('resize', stick);
+</script>
