@@ -6,6 +6,12 @@ Two free sources, queried in that order and both recorded:
   Open Library  https://openlibrary.org/search.json   subjects, work key, cover
   Google Books  https://www.googleapis.com/books/v1/  description, categories
 
+Then a third request, to the work's own edition list, because the first two
+answer about the *work* and a shelf holds an *edition*. Year, ISBN, page count,
+binding and imprint are properties of a printing, and `search.json` carries
+none of them - which is why `year` and `isbn13` sat at 0 of 46 while everything
+else filled in.
+
 Neither needs a key. Neither is trusted blindly — a hit only counts when the
 normalised title matches and an author surname is present on both sides, and
 whatever matched is written to its own columns. Nothing here ever overwrites
@@ -95,6 +101,24 @@ def author_ok(want, got_names):
     return bool(want_set & got_set)
 
 
+def confirmable(book, ok):
+    """Reject a bare title match on a record that names nobody.
+
+    `ok is None` means the catalogue record lists no author we could read, so
+    there is nothing to disagree with - which is right for China in Ten Words,
+    filed under 余华 and unreadable after normalisation, and wrong for
+    Collected Essays, where an exact title match on a record with no author
+    handed James Baldwin a volume of Victorian essays published in 1902. The
+    line between them is how much work the title is doing: three meaningful
+    words is a book, two is a category.
+    """
+    if ok is not None:
+        return ok
+    if not surnames(book["authors"]):
+        return True          # no author on our side either; nothing is claimed
+    return len(norm(book["title"]).split()) >= 3
+
+
 def openlibrary(book):
     q = urllib.parse.urlencode({
         "title": book["title"],
@@ -113,7 +137,7 @@ def openlibrary(book):
         if ts == 0:
             continue
         ok = author_ok(book["authors"], doc.get("author_name") or [])
-        if ok is False:
+        if not confirmable(book, ok):
             continue
         score = ts - (0.15 if ok is None else 0.0)
         if score > best_score:
@@ -146,6 +170,159 @@ def ol_description(work_key):
     if isinstance(d, dict):
         d = d.get("value")
     return d.strip() if isinstance(d, str) and d.strip() else None
+
+
+# Words that name what a publisher is rather than which one it is. Without
+# this, "Anchor Books" and "Pantheon Books" agree on "books" and the catalogue
+# hands back the hardcover ISBN for a copy that is plainly the paperback.
+IMPRINT_NOISE = {"press", "publisher", "publishers", "publishing", "company",
+                 "co", "inc", "incorporated", "ltd", "limited", "llc", "group",
+                 "university", "editions", "edition", "pub", "usa", "us"}
+
+
+def imprint(name):
+    return {t for t in norm(name).split() if t not in IMPRINT_NOISE and len(t) > 2}
+
+
+def pub_match(ours, theirs):
+    """Does an edition's imprint agree with what the spine says?
+
+    Token containment, not string containment: the spine says "Belknap /
+    Harvard" and the catalogue says "Belknap Press of Harvard University
+    Press", which is the same publisher and which no substring test survives.
+    The shorter name's distinguishing words all have to appear in the longer
+    one, so "Oxford" matches "Oxford University Press" and "Custom House"
+    still refuses "HarperCollins Publishers".
+    """
+    a = imprint(ours)
+    if not a:
+        return False
+    for t in theirs or []:
+        b = imprint(t)
+        if not b:
+            continue
+        short, long = (a, b) if len(a) <= len(b) else (b, a)
+        if short <= long:
+            return True
+    return False
+
+
+def year_of(publish_date):
+    """'Jan 18, 2022' -> 2022. Open Library's date field is free text."""
+    years = re.findall(r"\b(1[4-9]\d{2}|20\d{2})\b", publish_date or "")
+    return int(years[-1]) if years else None
+
+
+BINDINGS = (("hard", "hardcover"), ("pbk", "paperback"), ("paper", "paperback"),
+            ("soft", "paperback"), ("board", "boxed"))
+
+
+def binding(physical_format):
+    f = (physical_format or "").lower().strip()
+    if not f:
+        return None
+    for needle, name in BINDINGS:
+        if needle in f:
+            return name
+    return f
+
+
+def ol_edition(work_key, book):
+    """Pick the printing on the shelf out of the work's edition list.
+
+    The tie to *this copy* is the imprint: we read "Custom House" off the
+    spine, and exactly one of Davos Man's three Open Library editions says
+    Custom House - that one carries the ISBN, the page count and the binding,
+    and the other two are HarperCollins ebook records. Where the imprint can't
+    settle it, a work with a single edition in the catalogue is the only
+    printing on offer and is taken as the answer, marked as such.
+
+    Anything else returns nothing. A year invented from the wrong printing is
+    the exact guess the whole status column exists to prevent, and an empty
+    field says so plainly where a plausible wrong one does not.
+    """
+    if not work_key:
+        return None
+    data = get(f"https://openlibrary.org{work_key}/editions.json?limit=50")
+    if not data:
+        return None
+    entries = data.get("entries") or []
+    if not entries:
+        return None
+
+    def in_english(e):
+        langs = [l.get("key", "") for l in (e.get("languages") or [])]
+        return (not langs) or "/languages/eng" in langs
+
+    def completeness(e):
+        return (bool(e.get("isbn_13") or e.get("isbn_10")) * 4
+                + bool(e.get("publish_date")) * 3
+                + bool(e.get("number_of_pages")) * 2
+                + bool(e.get("physical_format")))
+
+    named = [e for e in entries
+             if in_english(e) and pub_match(book.get("publisher"), e.get("publishers"))]
+    if named:
+        best, how = max(named, key=completeness), "publisher"
+    elif len(entries) == 1 and in_english(entries[0]) and not norm(book.get("publisher")):
+        # A single edition is only the answer when we have no imprint of our
+        # own to check it against. Where we do and it disagrees, the
+        # disagreement is the finding: The Edge of Islam's one Open Library
+        # edition is a 2002 dissertation microfilm, and the copy on the shelf
+        # says Duke. Radical Dharma's is a large-print reprint, and China in
+        # Ten Words' is the Pantheon hardcover against an Anchor paperback.
+        # All three wrote a wrong year or a wrong ISBN before this line.
+        best, how = entries[0], "sole"
+    else:
+        return None
+
+    isbn13 = (best.get("isbn_13") or [None])[0]
+    isbn10 = (best.get("isbn_10") or [None])[0]
+    return {
+        "ol_edition": best.get("key"),
+        "edition_match": how,
+        "year": year_of(best.get("publish_date")),
+        "isbn13": isbn13,
+        "isbn10": isbn10,
+        "publisher": (best.get("publishers") or [None])[0],
+        "format": binding(best.get("physical_format")),
+        "page_count": best.get("number_of_pages"),
+        "edition": (best.get("edition_name") or None),
+    }
+
+
+def apply_edition(con, book, work_key):
+    """Write the edition facts, never over something already recorded.
+
+    COALESCE on the existing value in every column: what was read off the
+    photograph outranks what a catalogue says about a printing, and a verdict
+    Mo has already typed outranks both. The ISBN uniqueness index means a
+    duplicate can fail the write, so this catches rather than aborting the run.
+    """
+    ed = ol_edition(work_key, book); time.sleep(PAUSE)
+    if not ed:
+        return None
+    try:
+        con.execute(
+            """UPDATE books SET
+                 year        = COALESCE(year, ?),
+                 isbn13      = COALESCE(isbn13, ?),
+                 isbn10      = COALESCE(isbn10, ?),
+                 publisher   = COALESCE(publisher, ?),
+                 format      = COALESCE(format, ?),
+                 edition     = COALESCE(edition, ?),
+                 page_count  = COALESCE(?, page_count),
+                 ol_edition  = ?,
+                 edition_match = ?
+               WHERE id=?""",
+            (ed["year"], ed["isbn13"], ed["isbn10"], ed["publisher"],
+             ed["format"], ed["edition"], ed["page_count"],
+             ed["ol_edition"], ed["edition_match"], book["id"]))
+        con.commit()
+    except sqlite3.IntegrityError as e:
+        print(f"    ! {e} - edition not written", file=sys.stderr)
+        return None
+    return ed
 
 
 def googlebooks(book):
@@ -261,6 +438,41 @@ def tidy_subjects(raw, limit=8):
     return out
 
 
+def describe(ed):
+    if not ed:
+        return "no edition"
+    got = [k for k in ("year", "isbn13", "page_count") if ed.get(k)]
+    return f"edition by {ed['edition_match']} ({', '.join(got) or 'nothing new'})"
+
+
+def editions_pass():
+    """Backfill the edition facts for books already matched to a work.
+
+    Its own entry point because the work match and the edition match are two
+    different questions, and the first one had already been answered for every
+    book on the shelf by the time the second one was being asked. Idempotent:
+    it skips anything that already carries an edition key.
+    """
+    con = sqlite3.connect(DB)
+    con.row_factory = sqlite3.Row
+    rows = con.execute(
+        "SELECT id, title, authors, publisher, ol_work FROM books "
+        "WHERE ol_work IS NOT NULL AND ol_edition IS NULL "
+        "ORDER BY shelf, position").fetchall()
+
+    print(f"{len(rows)} books to match against an edition\n")
+    found = 0
+    for b in rows:
+        book = dict(b)
+        print(f"[{book['id']:>3}] {book['title'][:52]}")
+        ed = apply_edition(con, book, book["ol_work"])
+        found += bool(ed)
+        print(f"      {describe(ed)}\n")
+
+    con.close()
+    print(f"done: {found} of {len(rows)} tied to an edition")
+
+
 def main():
     con = sqlite3.connect(DB)
     con.row_factory = sqlite3.Row
@@ -311,14 +523,19 @@ def main():
              (ol or {}).get("ol_isbn13"),
              "+".join(sources), conf, book["id"]))
         con.commit()
+        ed = apply_edition(con, book, (ol or {}).get("ol_work"))
         hits += 1
         print(f"      {'+'.join(sources)} @ {conf} | "
               f"{len(subjects)} subjects | "
-              f"{'summary' if summary else 'no summary'}\n")
+              f"{'summary' if summary else 'no summary'} | "
+              f"{describe(ed)}\n")
 
     con.close()
     print(f"done: {hits} matched, {misses} not found")
 
 
 if __name__ == "__main__":
-    main()
+    if "--editions" in sys.argv:
+        editions_pass()
+    else:
+        main()

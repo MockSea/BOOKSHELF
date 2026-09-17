@@ -36,7 +36,7 @@ def freetext(book):
         if ts == 0:
             continue
         ok = E.author_ok(book["authors"], doc.get("author_name") or [])
-        if ok is False:
+        if not E.confirmable(book, ok):
             continue
         score = ts - (0.15 if ok is None else 0.0)
         if score > best_score:

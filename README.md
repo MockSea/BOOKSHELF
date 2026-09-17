@@ -9,7 +9,7 @@ library/
   catalog.db          SQLite, tracked - the source of truth
   photos/             shelf photos as sent (gitignored)
   exports/            generated JSON/CSV for whatever comes next
-  enrich              fills summaries, genres and covers from Open Library
+  enrich              Open Library: the work, then the printing on the shelf
   enrich-retry        re-runs the misses with looser matching
   render              catalog.db -> docs/index.html  (the public site)
   render-swipe        catalog.db -> swipe.html       (private verification)
@@ -36,6 +36,34 @@ questions arrive in a batch rather than one text at a time.
 
 `spine` holds what the photo actually shows, verbatim. Every other field is
 inference from that, which is why the two are separate columns.
+
+## Enrichment
+
+```sh
+./enrich              # match each book to an Open Library work, then to an edition
+./enrich --editions   # only the edition pass, for books already matched to a work
+./enrich-retry        # re-run the misses with looser matching
+```
+
+Two lookups, because a shelf holds an *edition* and the obvious lookup answers
+about the *work*. Year, ISBN, binding and page count are properties of a
+printing, and Open Library's work search carries none of them - which is why
+`year` and `isbn13` sat empty on every row while subjects and covers filled in.
+
+An edition is only tied to a book when its imprint agrees with what the spine
+says: "Custom House" picks one of Davos Man's three editions and leaves the two
+HarperCollins ebook records alone. Where nothing agrees, the pass writes
+nothing and the record view says why. A year taken off the wrong printing is
+exactly the guess the `status` column exists to prevent, and the three times a
+looser rule was tried it produced a dissertation microfilm, a large-print
+reprint, and a hardcover ISBN on a paperback.
+
+Every write is `COALESCE`d against what is already there, so a reading off the
+photograph and a verdict from Mo both outrank a catalogue.
+
+Summaries are the one real gap. They come from the work record's `description`,
+and most Open Library work records have none. Google Books has them and rejects
+every unauthenticated request with a 429, so closing that gap needs an API key.
 
 ## Commands
 
