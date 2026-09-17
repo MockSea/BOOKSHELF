@@ -302,3 +302,38 @@ record and most work records don't have one — sampled six of the blanks, all
 `None`; edition records have no description field at all. Google Books has
 descriptions and returns 429 to every unauthenticated request, re-confirmed
 today. Closing it needs a free Google Books API key, which is Mo's call.
+
+## Summaries, from Google Books — 2026-09-17
+
+Mo supplied the key the previous entry said it needed. `./enrich --summaries`
+is its own pass rather than part of `main` because the work match was settled
+long before a key existed; re-running `main` would ask Open Library 46 more
+questions to change one column. It writes `summary` and nothing else — subjects
+and page count already came from a record tied to this printing, and Google's
+are about some edition of the work.
+
+22 of the 27 blanks filled on the first run. Summaries went 19 → 41 of 46.
+
+Spot-checking the results found two blurbs that were not blurbs:
+
+**"315 p" as the summary of *Imagined Communities*.** A physical-extent note
+filed in Open Library's description field. Diffing the live db against
+`git show HEAD:catalog.db` put it before this run, so it came through
+`ol_description` → `clamp()`, which had no minimum length. `BLURB_MIN = 40`
+now rejects it. Google had a real 773-character blurb once the field was clear.
+
+**Mojibake and stray markup in *The Watchman in Pieces*.** A probe against the
+live API confirmed Google ships both: codepoints `0xe2 0x20ac 0x201d` where an
+em dash belongs — cp1252's rendering of that dash's UTF-8 bytes — and Project
+MUSE's `DIV` / `/div` wrappers passed through as literal text, which is why the
+HTML-tag stripper missed them. `demojibake()` re-encodes by the same table and
+decodes as UTF-8; anything holding a character cp1252 cannot represent was
+never mojibake and is left alone. A `MUSE` regex takes the markers.
+
+The guards are in `clamp()`, so both fixes apply to whatever arrives next, and
+every stored summary was re-run through it rather than patched by hand.
+
+Five books still have no summary: 4 *The Relational Self*, 6 *Toothpicks &
+Logos*, 15 *eTrust*, 32 *Handbook of Trust Research*, 40 *A Drop of Midnight*.
+Google has no description for any of them — the first four are academic titles
+with thin trade metadata.

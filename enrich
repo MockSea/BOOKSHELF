@@ -380,12 +380,43 @@ def googlebooks(book):
     }
 
 
+# A blurb has to be a blurb. Open Library handed back "315 p" as the
+# description of Imagined Communities - a physical-extent note filed in the
+# wrong field - and it sat on the page as this book's summary. Nothing real
+# comes in under this, and an empty field is the better answer.
+BLURB_MIN = 40
+
+# Project MUSE ships its abstracts wrapped in these, and Google passes them
+# through as literal text rather than as tags, so the tag stripper misses them.
+MUSE = re.compile(r"^\s*(?:<)?DIV\b|(?:<)?/div\s*$", re.I)
+
+
+def demojibake(text):
+    """Undo UTF-8 that was read as cp1252 somewhere upstream.
+
+    Google's own record for The Watchman in Pieces carries the three characters
+    cp1252 makes of an em dash's UTF-8 bytes. Re-encoding by that same table and
+    decoding as UTF-8 puts the dash back. Anything holding a character cp1252
+    cannot represent was never mojibake, and is returned untouched.
+    """
+    if not any(m in text for m in ("\u00e2\u20ac", "\u00c3", "\u00c2\u00a0")):
+        return text
+    try:
+        return text.encode("cp1252").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+
+
 def clamp(text, limit=900):
     """Summaries run to essays. Cut on a sentence boundary, not mid-word."""
     if not text:
         return None
+    text = demojibake(text)
     text = re.sub(r"<[^>]+>", "", text)           # Google ships HTML in places
+    text = MUSE.sub("", text)
     text = re.sub(r"\s+", " ", text).strip()
+    if len(text) < BLURB_MIN:
+        return None
     if len(text) <= limit:
         return text
     cut = text[:limit]
