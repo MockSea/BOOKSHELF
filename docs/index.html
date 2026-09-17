@@ -289,7 +289,10 @@
 
   /* ----------------------------------------------------------------- list */
   .list {
-    --cols: 60px minmax(0, 2.3fr) minmax(0, 1.5fr) minmax(0, 1.4fr) 116px 124px;
+    /* Publisher left the table. It is one more thing to read in a row that is
+       already six wide, it is in the record, and nobody scans a shelf list by
+       imprint. Status shrank from a word to a swatch, which is the other 80px. */
+    --cols: 64px minmax(0, 2.6fr) minmax(0, 1.7fr) 98px 54px;
     border: 3px solid var(--ink);
     border-top: 0;
     background: #fff;
@@ -316,8 +319,12 @@
     letter-spacing: .13em;
     text-transform: uppercase;
     font-variation-settings: 'wdth' 110, 'wght' 700;
-    padding-block: 10px;
+    padding-block: 14px;
   }
+  /* WHERE is wider than the 1A#4 it labels, and a grid track sized to the
+     value let the header word run straight into TITLE. Every header cell now
+     shrinks and clips instead of bleeding into its neighbour. */
+  .lhead span { min-width: 0; overflow: hidden; }
 
   .lbody .lrow { cursor: pointer; }
   .lbody .lrow:nth-child(even) { background: #FCFAF4; }
@@ -332,9 +339,12 @@
     white-space: nowrap;
     padding-top: 1px;
   }
-  .c-title { font-variation-settings: 'wght' 700; min-width: 0; overflow-wrap: anywhere; }
+  /* break-word, not anywhere: anywhere will split a short word mid-letter to
+     avoid any overflow at all, which is how "McDaniel," ended up hyphen-less
+     across two lines. break-word only breaks a word with nowhere else to go. */
+  .c-title { font-variation-settings: 'wght' 700; min-width: 0; overflow-wrap: break-word; }
   .c-sub { display: block; font-variation-settings: 'wght' 400; font-size: 12.5px; color: var(--ink-soft); }
-  .c-soft { color: var(--ink-soft); font-size: 13.5px; min-width: 0; overflow-wrap: anywhere; }
+  .c-soft { color: var(--ink-soft); font-size: 13.5px; min-width: 0; overflow-wrap: break-word; line-height: 1.4; }
   .c-meta { display: none; }
   .t-none { color: #A9AEBC; }
 
@@ -348,23 +358,37 @@
     color: #fff;
   }
 
-  .st {
+  /* Status is a swatch, not a word. Forty-six rows reading UNVERIFIED said one
+     thing forty-six times and cost a 124px column to do it. The two fills are
+     the ones the meter in the header already uses, so the key at the top of
+     the page and the key above the list mean the same thing. */
+  .sw {
     display: inline-block;
+    width: 15px;
+    height: 15px;
+    border: 3px solid var(--ink);
+    background: #fff;
+    vertical-align: -3px;
+  }
+  .sw-confirmed { background: var(--yellow); }
+  .sw-unverified {
+    background: repeating-linear-gradient(-45deg, var(--yellow) 0 3px, #fff 3px 6px);
+  }
+
+  .reskey {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    align-items: center;
+    margin: 8px 0 0;
     font-size: 11px;
-    letter-spacing: .08em;
+    letter-spacing: .1em;
     text-transform: uppercase;
-    font-variation-settings: 'wdth' 104, 'wght' 700;
-    padding: 3px 7px;
-    border: 2px solid var(--ink);
-    white-space: nowrap;
+    font-variation-settings: 'wdth' 108, 'wght' 700;
+    color: var(--ink-soft);
   }
-  .st-confirmed   { background: var(--yellow); }
-  .st-unverified {
-    background: none;
-    border-color: transparent;
-    color: #8F95A4;
-    padding-inline: 0;
-  }
+  .reskey span { display: inline-flex; align-items: center; gap: 6px; }
+  .reskey .sw { width: 12px; height: 12px; border-width: 2px; vertical-align: 0; }
 
   /* Genre and blurb come from a catalogue lookup, not from the photograph, so
      they are set apart from the spine reading rather than mixed into it. */
@@ -377,14 +401,17 @@
     font-variation-settings: 'wdth' 106, 'wght' 600;
     color: #8F95A4;
   }
+  /* The blurb reads first, the way it does on a jacket and on a shelf-talker.
+     It used to sit above a wall of labels and lose to them. */
   .m-sum {
-    margin: 0 0 4px;
-    padding: 13px 15px;
-    background: var(--paper-2);
-    border-left: 5px solid var(--blue);
+    margin: 0;
+    padding: 14px 16px;
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-left-width: 7px;
     font-size: 14.5px;
-    line-height: 1.55;
-    color: var(--ink-soft);
+    line-height: 1.6;
+    color: var(--ink);
   }
   .m-sum cite {
     display: block;
@@ -395,12 +422,16 @@
     text-transform: uppercase;
     color: #8F95A4;
   }
-  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  /* Subject headings, and they sit under the blurb rather than in a labelled
+     row, because that is where a library puts them and because they read as
+     one object rather than a value. */
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
   .tags span {
     font-size: 11.5px;
-    padding: 2px 7px;
-    border: 2px solid var(--rule);
-    background: var(--paper);
+    letter-spacing: .04em;
+    padding: 4px 9px;
+    border: 2px solid var(--ink);
+    background: var(--paper-2);
   }
 
   .empty {
@@ -432,7 +463,26 @@
   dialog[open] { display: flex; flex-direction: column; }
   .m-head { flex: 0 0 auto; }
   dialog::backdrop { background: rgba(18,49,143,.6); }
-  .m-head { background: var(--blue); color: #fff; padding: 17px 20px; }
+  .m-head { position: relative; background: var(--blue); color: #fff; padding: 16px 52px 16px 20px; }
+  /* The close sits in the head, which does not scroll. At the foot of a
+     full-height sheet it would be four screens down from where you opened it. */
+  .m-x {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    font: inherit;
+    font-size: 22px;
+    line-height: 1;
+    background: var(--yellow);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    cursor: pointer;
+  }
+  .m-x:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
   .m-head h2 {
     font-family: var(--display);
     font-size: clamp(19px, 5.4vw, 24px);
@@ -442,10 +492,60 @@
     overflow-wrap: anywhere;
   }
   .m-head p { margin: 6px 0 0; font-size: 13.5px; color: #DCE5FF; }
-  .m-body { flex: 1 1 auto; min-height: 0; padding: 17px 20px 22px;
+  /* The strip a library puts on the spine and the top edge of the card: where
+     the copy lives, whose it is, whether anyone has checked it. Three facts
+     about the object, held apart from everything the catalogue says about the
+     book, and pinned above the scroll so they stay put while you read. */
+  .m-strip {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px 14px;
+    padding: 10px 20px;
+    background: var(--paper-2);
+    border-bottom: 3px solid var(--ink);
+    font-size: 11.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 106, 'wght' 700;
+  }
+  .m-call { color: var(--blue); font-variant-numeric: tabular-nums; }
+  .m-strip .m-state { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-soft); }
+
+  .m-body { flex: 1 1 auto; min-height: 0; padding: 18px 20px 24px;
             overflow-y: auto; -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain; }
-  .m-body dl { margin: 0; display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 9px 14px; }
+
+  /* Two blocks, because a catalogue record has always been two things: the
+     work (true of every copy ever printed, and it came from a lookup) and the
+     item on the shelf (true of this one, and it came from the photograph).
+     Twelve undifferentiated rows hid that the page even knows the difference. */
+  .m-sec {
+    margin: 24px 0 10px;
+    padding-bottom: 5px;
+    border-bottom: 3px solid var(--ink);
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    font-variation-settings: 'wdth' 110, 'wght' 700;
+  }
+  .m-sec small {
+    display: block;
+    margin-top: 4px;
+    font-size: 10.5px;
+    letter-spacing: .05em;
+    text-transform: none;
+    font-variation-settings: 'wdth' 100, 'wght' 400;
+    color: var(--ink-soft);
+  }
+  .m-gone {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #8F95A4;
+  }
+  .m-body dl { margin: 0; display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 8px 14px; }
   .m-body dt {
     font-size: 11px;
     letter-spacing: .1em;
@@ -462,19 +562,6 @@
     padding: 7px 10px;
     font-size: 13.5px;
   }
-  .m-acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 20px; }
-  .m-close {
-    font: inherit;
-    font-variation-settings: 'wdth' 108, 'wght' 700;
-    font-size: 13px;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    padding: 11px 16px;
-    border: 3px solid var(--ink);
-    cursor: pointer;
-  }
-  .m-close { background: var(--yellow); color: var(--ink); }
-  .m-close:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 
 
   /* ------------------------------------------------------------ phone */
@@ -490,28 +577,50 @@
     .stacks div { border-right: 0; border-bottom: 3px solid var(--ink); }
     .stacks div:last-child { border-bottom: 0; }
 
-    .list { --cols: 44px minmax(0, 1fr) auto; }
-    .lrow { padding: 12px; gap: 0 10px; }
+    /* 52px because WHERE is wider than the 1A#4 underneath it, and the header
+       was overflowing into TITLE at 44. The status track is a fixed 52 and not
+       auto, because .lhead and each .lrow are separate grids - auto would size
+       to the word in one and to the 15px swatch in the other, and the title
+       column would start in a different place on every line. */
+    .list { --cols: 52px minmax(0, 1fr) 52px; }
+    .lrow { padding: 12px 12px 13px; gap: 0 10px; }
+    .lhead { font-size: 10.5px; letter-spacing: .1em; }
     .c-soft,
     .c-who,
     .c-tag,
     .lhead span:nth-child(3),
-    .lhead span:nth-child(4),
-    .lhead span:nth-child(5) { display: none; }
+    .lhead span:nth-child(4) { display: none; }
+    /* The author, and nothing else. The contributor chip was the same three
+       letters on all forty-six rows and it was what the author line kept
+       wrapping around; the publisher is in the record. */
     .c-meta {
       display: block;
-      grid-column: 2 / -1;
-      margin-top: 4px;
+      grid-column: 2 / 3;
+      margin-top: 3px;
       font-size: 12.5px;
       line-height: 1.45;
       color: var(--ink-soft);
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
-    .c-meta .who { margin-right: 7px; }
-    .c-status { justify-self: end; align-self: start; }
+    .c-status { justify-self: end; align-self: start; padding-top: 2px; }
 
-    .m-body dl { grid-template-columns: 1fr; gap: 3px; }
-    .m-body dd + dt { margin-top: 10px; }
+    /* The record fills the screen here. A 560px card inside a 390px viewport
+       was the whole complaint - it had a gutter, a border and a max-height to
+       honour before it got to the words. Stays a two-column list, because
+       stacking every label over its value doubled a record to 1393px. */
+    dialog {
+      max-width: none;
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      margin: 0;
+      border-width: 0;
+    }
+    .m-head { padding: 15px 52px 15px 16px; }
+    .m-strip { padding-inline: 16px; }
+    .m-body { padding: 16px 16px 28px; }
+    .m-body dl { grid-template-columns: 88px minmax(0, 1fr); gap: 8px 11px; }
+    .m-body dd { font-size: 14px; }
 
     /* Pinned, the toolbar is permanently spending screen, so it gets tighter
        here than it needs to be on a desktop where it only costs once. */
@@ -566,6 +675,10 @@
     </div>
     <div class="chips" id="chips" role="group" aria-label="Filter by stack"></div>
     <p class="resline" id="resline"></p>
+    <p class="reskey">
+      <span><b class="sw sw-unverified"></b> Unverified</span>
+      <span><b class="sw sw-confirmed"></b> Verified</span>
+    </p>
   </div>
 
   <div class="list" role="table" aria-label="Catalogued books">
@@ -573,7 +686,6 @@
       <span role="columnheader">Where</span>
       <span role="columnheader">Title</span>
       <span role="columnheader">Author</span>
-      <span role="columnheader">Publisher</span>
       <span role="columnheader">Contributor</span>
       <span role="columnheader">Status</span>
     </div>
@@ -583,17 +695,21 @@
 
 </div>
 
-<dialog id="dlg">
+<dialog id="dlg" aria-labelledby="d-title">
   <div class="m-head">
+    <button class="m-x" id="d-close" type="button" aria-label="Close this record">&times;</button>
     <h2 id="d-title"></h2>
     <p id="d-sub"></p>
   </div>
+  <p class="m-strip">
+    <span class="m-call" id="d-call"></span>
+    <span id="d-who"></span>
+    <span class="m-state" id="d-state"></span>
+  </p>
   <div class="m-body">
     <p class="m-sum" id="d-sum" hidden></p>
-    <dl id="d-fields"></dl>
-    <div class="m-acts">
-      <button class="m-close" id="d-close" type="button">Close</button>
-    </div>
+    <p class="tags" id="d-tags" hidden></p>
+    <div id="d-fields"></div>
   </div>
 </dialog>
 
@@ -610,6 +726,7 @@ const where = b => (b.shelf || '?') + (b.position ? '#' + b.position : '');
 const verified = b => b.status === 'confirmed';
 const state = b => verified(b) ? 'confirmed' : 'unverified';
 const label = b => verified(b) ? 'Verified' : 'Unverified';
+const swatch = b => `<span class="sw sw-${state(b)}" role="img" aria-label="${label(b)}"></span>`;
 const nowt = '<span class="t-none">—</span>';
 
 /* ---- awning stripes, sized to the viewport rather than hardcoded ---- */
@@ -691,17 +808,15 @@ function draw() {
   }).sort(SORTS[sortKey]);
 
   $('rows').innerHTML = hit.map(b => {
-    const meta = [b.authors, b.publisher].filter(Boolean).map(esc).join(' &middot; ');
-  const genre = (b.subjects || '').split(';')[0].trim();
+    const genre = (b.subjects || '').split(';')[0].trim();
     return `
     <div class="lrow" role="row" tabindex="0" data-id="${b.id}">
       <span class="c-num" role="cell">${esc(where(b))}</span>
       <span class="c-title" role="cell">${esc(b.title)}${b.subtitle ? `<span class="c-sub">${esc(b.subtitle)}</span>` : ''}${genre ? `<span class="c-tag">${esc(genre)}</span>` : ''}</span>
       <span class="c-soft" role="cell">${b.authors ? esc(b.authors) : nowt}</span>
-      <span class="c-soft" role="cell">${b.publisher ? esc(b.publisher) : nowt}</span>
       <span class="c-who" role="cell">${b.contributor ? `<span class="who">${esc(b.contributor)}</span>` : nowt}</span>
-      <span class="c-status" role="cell"><span class="st st-${state(b)}">${label(b)}</span></span>
-      <span class="c-meta" aria-hidden="true">${b.contributor ? `<span class="who">${esc(b.contributor)}</span>` : ''}${meta || ''}</span>
+      <span class="c-status" role="cell">${swatch(b)}</span>
+      <span class="c-meta" aria-hidden="true">${b.authors ? esc(b.authors) : ''}</span>
     </div>`;
   }).join('');
 
@@ -725,39 +840,78 @@ $('rows').addEventListener('keydown', e => {
 
 /* ---- the record ---- */
 const dlg = $('dlg');
+
+/* A catalogue record, in the order a person reads one: what it is, where the
+   copy lives, what it's about, then the bibliographic detail. The detail is
+   split the way a library splits it - the work against the item - because the
+   two come from different places and are true of different things. An empty
+   field is not a row: printing "Year: -" twelve times is how the old record
+   got to 1393px of scroll with nothing in most of it. */
 function open(b) {
   if (!b) return;
+
   $('d-title').textContent = b.title;
-  $('d-sub').textContent = [b.subtitle, b.authors].filter(Boolean).join(' · ') || 'Shelf 1';
+  $('d-sub').textContent = b.authors || b.subtitle || '';
 
-  const line = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : '';
-  const blank = (k) => `<dt>${k}</dt><dd>${nowt}</dd>`;
-  const subjects = (b.subjects || '').split(';').map(t => t.trim()).filter(Boolean);
+  $('d-call').textContent = where(b);
+  $('d-who').textContent = b.contributor || '';
+  $('d-who').hidden = !b.contributor;
+  $('d-state').innerHTML = swatch(b) + ' ' + label(b);
+
   const source = b.enrich_source === 'none' ? '' : (b.enrich_source || '');
-
   $('d-sum').innerHTML = b.summary
     ? `${esc(b.summary)}<cite>From ${esc(source || 'a catalogue record')}, not from the photograph</cite>`
     : '';
   $('d-sum').hidden = !b.summary;
 
-  $('d-fields').innerHTML = [
-    `<dt>On the spine</dt><dd class="spine">${esc(b.spine || '—')}</dd>`,
-    line('Where', esc(where(b))),
-    line('Contributor', `<span class="who">${esc(b.contributor || '')}</span>`),
-    line('Publisher', esc(b.publisher || '')),
-    b.year ? line('Year', b.year) : blank('Year'),
-    b.isbn13 || b.isbn10 ? line('ISBN', esc(b.isbn13 || b.isbn10)) : blank('ISBN'),
-    line('Edition', esc(b.edition || '')),
-    line('Format', esc(b.format || '')),
-    line('Series', [b.series, b.series_index].filter(Boolean).map(esc).join(' ')),
-    subjects.length ? line('Genre', `<span class="tags">${subjects.map(t => `<span>${esc(t)}</span>`).join('')}</span>`) : '',
-    b.ol_first_year ? line('First published', b.ol_first_year + ' <small>(the work, not this copy)</small>') : '',
-    b.page_count ? line('Pages', b.page_count) : '',
-    line('Status', `<span class="st st-${state(b)}">${label(b)}</span>`),
-    b.confidence != null ? line('Spine read', Math.round(b.confidence * 100) + '% sure of the letters') : '',
-    line('Question', b.question ? esc(b.question) : ''),
-    line('Note', b.notes ? esc(b.notes) : ''),
-  ].join('');
+  const subjects = (b.subjects || '').split(';').map(t => t.trim()).filter(Boolean);
+  $('d-tags').innerHTML = subjects.map(t => `<span>${esc(t)}</span>`).join('');
+  $('d-tags').hidden = !subjects.length;
+
+  const dl = pairs => {
+    const rows = pairs.filter(r => r[1]).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`);
+    return rows.length ? `<dl>${rows.join('')}</dl>` : '';
+  };
+  const sec = (title, note, body) => body
+    ? `<h3 class="m-sec">${title}${note ? `<small>${note}</small>` : ''}</h3>${body}`
+    : '';
+
+  const copy = dl([
+    ['Spine reads', b.spine ? `<span class="spine">${esc(b.spine)}</span>` : ''],
+    ['Subtitle', esc(b.subtitle || '')],
+    ['Publisher', esc(b.publisher || '')],
+    ['Year', b.year || ''],
+    ['Edition', esc(b.edition || '')],
+    ['Format', esc(b.format || '')],
+    ['ISBN', esc(b.isbn13 || b.isbn10 || '')],
+  ]);
+
+  const work = dl([
+    ['First published', b.ol_first_year || ''],
+    ['Pages', b.page_count || ''],
+    ['Series', [b.series, b.series_index].filter(Boolean).map(esc).join(' ')],
+  ]);
+
+  const record = dl([
+    ['Status', label(b)],
+    ['Spine read', b.confidence != null ? Math.round(b.confidence * 100) + '% sure of the letters' : ''],
+    ['Open question', b.question ? esc(b.question) : ''],
+    ['Note', b.notes ? esc(b.notes) : ''],
+  ]);
+
+  /* Three fields are expected on every book and are the ones a spine cannot
+     supply. Naming the gaps once beats three em-dashes pretending to be data. */
+  const missing = [
+    ['publisher', b.publisher],
+    ['year', b.year],
+    ['ISBN', b.isbn13 || b.isbn10],
+  ].filter(([, v]) => !v).map(([k]) => k);
+
+  $('d-fields').innerHTML =
+    sec('This copy', 'Read off the photograph', copy) +
+    sec('The work', 'From a catalogue lookup', work) +
+    sec('The record', '', record) +
+    (missing.length ? `<p class="m-gone">Not recorded yet: ${missing.join(', ')}.</p>` : '');
 
   dlg.showModal();
 }

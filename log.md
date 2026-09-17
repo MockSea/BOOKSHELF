@@ -197,3 +197,48 @@ Check stays an artifact.
 
 Blocked at the last step: creating the public repo was denied here, so the push
 and the Pages switch are waiting on Mo.
+
+## The record and the table, reworked — 2026-09-17
+
+Mo, on the detail view: *"There's got to be a better way of showing this
+information. Libraries and bookstores do it, we can too."* And on the table:
+*"Maybe we can reduce the information here. change status to a color to save
+space, give the column titles some room to breathe. Text wrapping for book
+information."*
+
+**The record.** It was a summary sitting on top of twelve undifferentiated
+label/value rows, which at 390px stacked into 1393px of scroll. What a library
+actually does is split the record in two: the **work** (true of every copy ever
+printed, and it came from a catalogue) against the **item** (true of this one,
+and it came from the photograph). Mo's columns fall on that line already —
+`ol_first_year`, `page_count` and `subjects` are the work; `shelf`, `position`,
+`contributor`, `spine` and `confidence` are the copy. Two headed blocks instead
+of one flat list, and the page stops hiding that it knows the difference.
+
+Around that: a call-number strip pinned above the scroll (where · whose ·
+checked or not), the blurb leading as a jacket blurb does, subject headings as
+chips underneath it rather than as a labelled row, and an empty field simply
+not rendering — `Year: —` twelve times was most of the old height. The three
+that a spine genuinely cannot supply get named once at the bottom instead.
+
+On a phone the dialog is the screen: `max-width:none`, full height, no border.
+A 560px card inside a 390px viewport spent a gutter, a border and a max-height
+before it reached any words. The label column stays two-column at 88px rather
+than stacking — stacking is what doubled the scroll. 1230px now, with the
+summary reachable at y=139 and the close button in the head, which doesn't
+scroll.
+
+**The table.** `WHERETITLE` in his screenshot was a 44px grid track with a
+header word wider than the value it labels, bleeding right. Now 52px, and every
+header cell shrinks and clips. Status is a swatch — the same solid-yellow /
+hatched pair the meter in the hero already uses — with a key above the list;
+forty-six rows reading UNVERIFIED said one thing forty-six times for 124px.
+Publisher left the table entirely, and the mobile meta line is the author alone:
+the contributor chip was the same three letters on all forty-six rows and was
+what the author line kept wrapping around. `overflow-wrap` went from `anywhere`
+to `break-word`, which is why "McDaniel," was splitting oddly.
+
+One thing worth keeping: `.lhead` and each `.lrow` are separate grids, so an
+`auto` track sizes to the header word in one and to the 15px swatch in the
+other, and the title column starts in a different place on every line. Both
+breakpoints use fixed tracks now. Verified aligned at 1280 and 390.
