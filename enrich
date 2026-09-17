@@ -20,6 +20,7 @@ bad match is visible rather than baked in.
 """
 
 import json, re, sqlite3, sys, time, urllib.parse, urllib.request
+import unicodedata
 from pathlib import Path
 
 DB = Path(__file__).resolve().parent / "catalog.db"
@@ -54,25 +55,50 @@ def get(url):
         return None
 
 
+# Letters that survive NFKD intact because they are not an accent over a base
+# letter - o-slash is its own character, not o plus a mark.
+FOLD = str.maketrans({"\u00f8": "o", "\u00e6": "ae", "\u0153": "oe",
+                      "\u00f0": "d", "\u00fe": "th", "\u00df": "ss",
+                      "\u0142": "l", "\u0111": "d"})
+
+
+def fold(s):
+    """Accented letters to their plain ASCII base, not to a space.
+
+    "Cortazar" and "Cortazar" have to be the same string on both sides of a
+    comparison. Dropping the accent to a space instead broke names into
+    fragments too short to survive the token filter - "Ona" became nothing at
+    all, which then read as "this record names no author" and quietly loosened
+    the match test it was supposed to tighten.
+    """
+    s = unicodedata.normalize("NFKD", (s or "").translate(FOLD))
+    return "".join(c for c in s if not unicodedata.combining(c))
+
+
 def norm(s):
     """Lowercase, strip articles, punctuation and the ampersand/and split."""
-    s = (s or "").lower().replace("&", " and ")
+    s = fold(s).lower().replace("&", " and ")
     s = re.sub(r"\b(a|an|the)\b", " ", s)
     s = re.sub(r"[^a-z0-9 ]+", " ", s)
     return re.sub(r"\s+", " ", s).strip()
 
 
 def surnames(authors):
-    """'Baldwin, James; Didion, Joan' -> {'baldwin', 'didion'}"""
+    """'Baldwin, James; Didion, Joan' -> {'baldwin', 'didion'}
+
+    A compound or hyphenated surname contributes each of its words separately,
+    because the other side of the comparison is tokenised the same way. Keeping
+    "Hongoltz-Hetling" whole meant holding the string "hongoltz hetling", which
+    can never intersect the {"hongoltz", "hetling"} Open Library returns, and
+    the book was rejected over an author both sides in fact agreed on.
+    """
     out = set()
     for part in (authors or "").split(";"):
         part = part.strip()
         if not part:
             continue
         last = part.split(",")[0] if "," in part else part.split()[-1]
-        last = norm(last)
-        if last:
-            out.add(last)
+        out |= name_tokens(last)
     return out
 
 
@@ -90,6 +116,11 @@ def title_score(want, got):
 
 SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "phd", "md", "ed", "eds"}
 
+# Nobody is identified by these. They survive the len > 2 test and would let
+# one "van" stand in for a surname match once compound names are split apart.
+PARTICLES = {"van", "von", "der", "den", "del", "dos", "das", "bin", "ibn",
+             "mac", "san", "abu", "ben", "ter", "zum", "und"}
+
 
 def name_tokens(name):
     """Every meaningful word in a name, not just the last one.
@@ -99,7 +130,7 @@ def name_tokens(name):
     dropped so they can't stand in for a surname.
     """
     return {t for t in norm(name).split()
-            if len(t) > 2 and t not in SUFFIXES}
+            if len(t) > 2 and t not in SUFFIXES and t not in PARTICLES}
 
 
 def author_ok(want, got_names):

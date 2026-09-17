@@ -19,10 +19,14 @@ E = SourceFileLoader("enrich", str(Path(__file__).resolve().parent / "enrich")).
 
 def freetext(book):
     q = urllib.parse.urlencode({
-        # Raw author text, not the normalised surnames: normalising strips the
-        # accent off "Diakité" and Open Library then finds nothing.
-        "q": f'{book["title"]} {(book["authors"] or "").replace(";", " ")}'.strip(),
-        "limit": 8,
+        # Title only. Appending the author is what sank the first version of
+        # this: `q=A Libertarian Walks Into a Bear` returns the book, and the
+        # same query with "Hongoltz-Hetling, Matthew" on the end returns
+        # nothing, because `q` does not reliably index author names. Dropping
+        # the author costs no accuracy - author_ok/confirmable below still have
+        # to agree before anything is written.
+        "q": book["title"].strip(),
+        "limit": 20,
         "fields": "key,title,author_name,first_publish_year,isbn,subject,"
                   "publisher,number_of_pages_median,cover_i",
     })
@@ -62,7 +66,8 @@ def main():
     con.row_factory = sqlite3.Row
     rows = con.execute(
         "SELECT id, title, subtitle, authors, publisher FROM books "
-        "WHERE enrich_source = 'none' OR enriched_at IS NULL ORDER BY id").fetchall()
+        "WHERE enrich_source = 'none' OR enriched_at IS NULL "
+        "   OR (ol_work IS NULL AND subjects IS NULL) ORDER BY id").fetchall()
 
     print(f"{len(rows)} to retry\n")
     found = 0
@@ -76,11 +81,22 @@ def main():
 
         summary = E.clamp(E.ol_description(ol["ol_work"])); time.sleep(E.PAUSE)
         subjects = E.tidy_subjects(ol["subjects"])
+        # Fill gaps, never overwrite. A row that already carries a Google Books
+        # summary and source label is here only because Open Library was
+        # missed, so the label gains a source rather than losing one.
         con.execute(
             """UPDATE books SET
-                 summary=?, subjects=?, page_count=?, cover_url=?,
+                 summary       = COALESCE(summary, ?),
+                 subjects      = COALESCE(subjects, ?),
+                 page_count    = COALESCE(page_count, ?),
+                 cover_url     = COALESCE(cover_url, ?),
                  ol_work=?, ol_first_year=?, ol_isbn13=?,
-                 enrich_source='openlibrary', enrich_confidence=?,
+                 enrich_source = CASE
+                     WHEN enrich_source LIKE '%openlibrary%' THEN enrich_source
+                     WHEN enrich_source IN ('none', '') OR enrich_source IS NULL
+                          THEN 'openlibrary'
+                     ELSE 'openlibrary+' || enrich_source END,
+                 enrich_confidence=?,
                  enriched_at=datetime('now')
                WHERE id=?""",
             (summary, "; ".join(subjects) or None, ol["page_count"],
