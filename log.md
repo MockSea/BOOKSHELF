@@ -443,16 +443,23 @@ label rather than replacing it.
 
 Recovered: five of the thirteen, including three rows that already had a Google
 Books record and were missing Open Library's subjects and cover. Coverage across
-all 154 books is now 132 summaries, 133 subject lists, 112 covers, 92 years.
+all 154 books at the time was 132 summaries, 133 subject lists, 112 covers, 92
+years.
 
-Eight rows still have nothing, and those are the real thing: three Spanish-
+Eight rows still had nothing, and those are the real thing: three Spanish-
 language titles, *A Chuukese Theory of Personhood*, *A John Heskett Reader*,
-*Unraveling*, *The Relational Self*, and the green spine nobody can read.
+*Unraveling*, *The Relational Self*, and the green spine nobody could read.
+
+### The green spine was a notebook
+Mo answered the 2C question: it is a blank notebook, not a book. Row 76 is
+deleted and 2C renumbered to a contiguous 1-14, so the catalogue is 153 books
+and the unmatched list is seven, not eight. Worth saying because the row was
+never a failure of the enrichment pass - nothing was going to match it, and the
+only thing that could resolve it was asking.
 
 ### Open with Mo
-1. The green spine in 2C.
-2. The Timeless Way of Building in 3A.
-3. Stockholm Noir in 3C.
-4. Whether the two duplicate pairs should stay as two rows each or collapse to
+1. The Timeless Way of Building in 3A.
+2. Stockholm Noir in 3C.
+3. Whether the two duplicate pairs should stay as two rows each or collapse to
    one row with a count. They are two rows for now, because that is what the
    shelf holds.
