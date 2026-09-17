@@ -1,0 +1,324 @@
+#!/usr/bin/env python3
+"""Fill genre, summary and edition facts for catalogued books.
+
+Two free sources, queried in that order and both recorded:
+
+  Open Library  https://openlibrary.org/search.json   subjects, work key, cover
+  Google Books  https://www.googleapis.com/books/v1/  description, categories
+
+Neither needs a key. Neither is trusted blindly — a hit only counts when the
+normalised title matches and an author surname is present on both sides, and
+whatever matched is written to its own columns. Nothing here ever overwrites
+what was read off the spine; the observation and the lookup stay separate so a
+bad match is visible rather than baked in.
+"""
+
+import json, re, sqlite3, sys, time, urllib.parse, urllib.request
+from pathlib import Path
+
+DB = Path(__file__).resolve().parent / "catalog.db"
+UA = "BOOKSHELF/1.0 (personal library catalogue; github.com/MockSea/bookshelf)"
+PAUSE = 0.4  # both APIs are free and unmetered; don't hammer them
+
+
+def get(url):
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=25) as r:
+            return json.load(r)
+    except Exception as e:
+        print(f"    ! {type(e).__name__}: {e}", file=sys.stderr)
+        return None
+
+
+def norm(s):
+    """Lowercase, strip articles, punctuation and the ampersand/and split."""
+    s = (s or "").lower().replace("&", " and ")
+    s = re.sub(r"\b(a|an|the)\b", " ", s)
+    s = re.sub(r"[^a-z0-9 ]+", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def surnames(authors):
+    """'Baldwin, James; Didion, Joan' -> {'baldwin', 'didion'}"""
+    out = set()
+    for part in (authors or "").split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        last = part.split(",")[0] if "," in part else part.split()[-1]
+        last = norm(last)
+        if last:
+            out.add(last)
+    return out
+
+
+def title_score(want, got):
+    """1.0 exact, 0.85 one contains the other, else 0."""
+    w, g = norm(want), norm(got)
+    if not w or not g:
+        return 0.0
+    if w == g:
+        return 1.0
+    if w in g or g in w:
+        return 0.85
+    return 0.0
+
+
+SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "phd", "md", "ed", "eds"}
+
+
+def name_tokens(name):
+    """Every meaningful word in a name, not just the last one.
+
+    Taking the last token alone matched "Charles L Marohn Jr" on "Jr" and threw
+    away eight books that were sitting in the index. Initials and suffixes are
+    dropped so they can't stand in for a surname.
+    """
+    return {t for t in norm(name).split()
+            if len(t) > 2 and t not in SUFFIXES}
+
+
+def author_ok(want, got_names):
+    """No author on our side means we can't disprove a match, only not confirm it."""
+    want_set = surnames(want)
+    if not want_set:
+        return None
+    got_set = set()
+    for n in got_names:
+        got_set |= name_tokens(n)
+    # Open Library lists some authors only in their own script (China in Ten
+    # Words is filed under 余华). Nothing survives normalisation, so there is
+    # no name to disagree with — unknown, not wrong.
+    if not got_set:
+        return None
+    return bool(want_set & got_set)
+
+
+def openlibrary(book):
+    q = urllib.parse.urlencode({
+        "title": book["title"],
+        "author": " ".join(surnames(book["authors"])) or "",
+        "limit": 5,
+        "fields": "key,title,author_name,first_publish_year,isbn,subject,"
+                  "publisher,number_of_pages_median,cover_i",
+    })
+    data = get(f"https://openlibrary.org/search.json?{q}")
+    if not data:
+        return None
+
+    best, best_score = None, 0.0
+    for doc in data.get("docs", []):
+        ts = title_score(book["title"], doc.get("title"))
+        if ts == 0:
+            continue
+        ok = author_ok(book["authors"], doc.get("author_name") or [])
+        if ok is False:
+            continue
+        score = ts - (0.15 if ok is None else 0.0)
+        if score > best_score:
+            best, best_score = doc, score
+
+    if not best:
+        return None
+
+    subjects = [s for s in (best.get("subject") or [])[:60]]
+    isbns = [i for i in (best.get("isbn") or []) if len(i) == 13]
+    return {
+        "score": round(best_score, 2),
+        "ol_work": best.get("key"),
+        "ol_first_year": best.get("first_publish_year"),
+        "ol_isbn13": isbns[0] if isbns else None,
+        "subjects": subjects,
+        "page_count": best.get("number_of_pages_median"),
+        "cover_url": (f"https://covers.openlibrary.org/b/id/{best['cover_i']}-M.jpg"
+                      if best.get("cover_i") else None),
+    }
+
+
+def ol_description(work_key):
+    if not work_key:
+        return None
+    data = get(f"https://openlibrary.org{work_key}.json")
+    if not data:
+        return None
+    d = data.get("description")
+    if isinstance(d, dict):
+        d = d.get("value")
+    return d.strip() if isinstance(d, str) and d.strip() else None
+
+
+def googlebooks(book):
+    terms = [f'intitle:"{book["title"]}"']
+    sn = surnames(book["authors"])
+    if sn:
+        terms.append(f'inauthor:{sorted(sn)[0]}')
+    q = urllib.parse.urlencode({"q": " ".join(terms), "maxResults": 5})
+    data = get(f"https://www.googleapis.com/books/v1/volumes?{q}")
+    if not data:
+        return None
+
+    best, best_score = None, 0.0
+    for item in data.get("items", []):
+        vi = item.get("volumeInfo", {})
+        ts = title_score(book["title"], vi.get("title"))
+        if ts == 0:
+            continue
+        ok = author_ok(book["authors"], vi.get("authors") or [])
+        if ok is False:
+            continue
+        # prefer an entry that actually carries a description
+        score = ts - (0.15 if ok is None else 0.0) + (0.05 if vi.get("description") else 0.0)
+        if score > best_score:
+            best, best_score = vi, score
+
+    if not best:
+        return None
+    return {
+        "score": round(min(best_score, 1.0), 2),
+        "summary": (best.get("description") or "").strip() or None,
+        "categories": best.get("categories") or [],
+        "page_count": best.get("pageCount"),
+    }
+
+
+def clamp(text, limit=900):
+    """Summaries run to essays. Cut on a sentence boundary, not mid-word."""
+    if not text:
+        return None
+    text = re.sub(r"<[^>]+>", "", text)           # Google ships HTML in places
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    stop = max(cut.rfind(". "), cut.rfind("! "), cut.rfind("? "))
+    return (cut[:stop + 1] if stop > limit * 0.5 else cut.rstrip() + "…")
+
+
+WORDS = None
+
+
+def english(s):
+    """True if the phrase has at least one word the system dictionary knows.
+
+    Open Library merges subject headings from every language edition, so one
+    book comes back tagged Nationalismus, Histoire and Vormgeving alongside its
+    English subjects. The dictionary holds singular forms only, so a bare
+    lookup rejects Billionaires, Islands and Photographs \u2014 hence the plural
+    stems, and a suffix check for compounds like Cryptocurrencies whose tail
+    (currency) is a word the list does have.
+    """
+    global WORDS
+    if WORDS is None:
+        try:
+            WORDS = {w.strip().lower()
+                     for w in open("/usr/share/dict/words")}
+        except OSError:
+            WORDS = set()
+    if not WORDS:
+        return True  # no dictionary, no opinion
+    long_words = [w for w in WORDS if 6 <= len(w)]
+    toks = [t.lower() for t in re.findall(r"[a-zA-Z]+", s) if len(t) >= 4]
+    if not toks:
+        return False
+    for t in toks:
+        stems = [t]
+        if t.endswith("ies"):
+            stems.append(t[:-3] + "y")
+        if t.endswith("es"):
+            stems.append(t[:-2])
+        if t.endswith("s"):
+            stems.append(t[:-1])
+        for v in stems:
+            if v in WORDS:
+                return True
+            if len(v) > 8 and any(v.endswith(w) for w in long_words
+                                  if len(w) < len(v)):
+                return True
+    return False
+
+
+def tidy_subjects(raw, limit=8):
+    """Open Library subjects are a landfill: keep the short human ones."""
+    seen, out = set(), []
+    junk = re.compile(
+        r"accessible book|protected daisy|in library|overdrive|lending library|"
+        r"internet archive|open library|nyt:|new york times|large type|"
+        r"reading level|collectio|^fiction$", re.I)
+    for s in raw:
+        s = s.strip()
+        if not s or len(s) > 40 or s.count(" ") > 3 or junk.search(s):
+            continue
+        if not english(s):
+            continue
+        k = s.lower()
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(s)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def main():
+    con = sqlite3.connect(DB)
+    con.row_factory = sqlite3.Row
+    rows = con.execute(
+        "SELECT id, title, subtitle, authors, publisher FROM books "
+        "WHERE enriched_at IS NULL ORDER BY shelf, position"
+    ).fetchall()
+
+    print(f"{len(rows)} books to enrich\n")
+    hits = misses = 0
+
+    for b in rows:
+        book = dict(b)
+        print(f"[{book['id']:>3}] {book['title'][:52]}")
+
+        ol = openlibrary(book); time.sleep(PAUSE)
+        gb = googlebooks(book); time.sleep(PAUSE)
+
+        subjects = tidy_subjects(
+            (ol["subjects"] if ol else []) + (gb["categories"] if gb else []))
+        summary = clamp(gb["summary"] if gb else None)
+        if not summary and ol:
+            summary = clamp(ol_description(ol["ol_work"])); time.sleep(PAUSE)
+
+        sources = [n for n, v in (("openlibrary", ol), ("googlebooks", gb)) if v]
+        if not sources:
+            con.execute(
+                "UPDATE books SET enrich_source='none', enrich_confidence=0, "
+                "enriched_at=datetime('now') WHERE id=?", (book["id"],))
+            con.commit()
+            misses += 1
+            print("      no confident match\n")
+            continue
+
+        conf = max([v["score"] for v in (ol, gb) if v])
+        con.execute(
+            """UPDATE books SET
+                 summary=?, subjects=?, page_count=?, cover_url=?,
+                 ol_work=?, ol_first_year=?, ol_isbn13=?,
+                 enrich_source=?, enrich_confidence=?, enriched_at=datetime('now')
+               WHERE id=?""",
+            (summary,
+             "; ".join(subjects) or None,
+             (ol or {}).get("page_count") or (gb or {}).get("page_count"),
+             (ol or {}).get("cover_url"),
+             (ol or {}).get("ol_work"),
+             (ol or {}).get("ol_first_year"),
+             (ol or {}).get("ol_isbn13"),
+             "+".join(sources), conf, book["id"]))
+        con.commit()
+        hits += 1
+        print(f"      {'+'.join(sources)} @ {conf} | "
+              f"{len(subjects)} subjects | "
+              f"{'summary' if summary else 'no summary'}\n")
+
+    con.close()
+    print(f"done: {hits} matched, {misses} not found")
+
+
+if __name__ == "__main__":
+    main()

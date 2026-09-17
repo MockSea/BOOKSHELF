@@ -1,0 +1,17 @@
+# Mo's shelf photos. The catalogue derived from them is public; the pictures
+# of someone's living room are not.
+photos/
+work/
+
+# Build output that isn't the site. swipe.html is the private verification
+# page and is only ever published as an artifact.
+swipe.html
+exports/
+__pycache__/
+*.pyc
+
+# SQLite working files. catalog.db itself IS tracked - it's the source of
+# truth the site is rendered from.
+catalog.db-journal
+catalog.db-wal
+catalog.db-shm

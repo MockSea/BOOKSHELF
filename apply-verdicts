@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Fold the swipe portal's verdicts into catalog.db.
+
+The portal writes one document per book into the artifact's `verdicts`
+collection. Pull them with the Artifact tool:
+
+    read_db  db_op=list  collection=verdicts  out_dir=<dir>
+
+which writes <dir>/verdicts/<book id>.json, then:
+
+    ./apply-verdicts <dir>/verdicts
+
+A `ok` verdict confirms the row. An `off` verdict does NOT downgrade the
+record: it parks the note in `question` and sets status to needs_input, so
+the book shows up as something to ask Mo about rather than as a fact.
+Nothing here guesses at a correction.
+"""
+
+import json
+import sqlite3
+import sys
+from pathlib import Path
+
+DB = Path(__file__).resolve().parent / "catalog.db"
+
+
+def main(argv):
+    if len(argv) != 2:
+        sys.exit("usage: apply-verdicts <dir of verdict json>")
+    src = Path(argv[1])
+    if not src.is_dir():
+        sys.exit(f"not a directory: {src}")
+
+    con = sqlite3.connect(DB)
+    con.row_factory = sqlite3.Row
+    ok = off = skipped = 0
+
+    for f in sorted(src.glob("*.json")):
+        try:
+            v = json.loads(f.read_text())
+        except json.JSONDecodeError as e:
+            print(f"  ! {f.name}: {e}")
+            skipped += 1
+            continue
+
+        book_id = v.get("id") or f.stem
+        row = con.execute("SELECT id, title FROM books WHERE id = ?",
+                          (book_id,)).fetchone()
+        if row is None:
+            print(f"  ! {f.name}: no book {book_id} in the catalog")
+            skipped += 1
+            continue
+
+        verdict = v.get("verdict")
+        if verdict == "ok":
+            con.execute("UPDATE books SET status = 'confirmed', question = NULL,"
+                        " updated_at = datetime('now') WHERE id = ?", (row["id"],))
+            ok += 1
+        elif verdict == "off":
+            note = (v.get("note") or "").strip()
+            con.execute("UPDATE books SET status = 'needs_input', question = ?,"
+                        " updated_at = datetime('now') WHERE id = ?",
+                        (note or "Flagged in the swipe portal, no note given.",
+                         row["id"]))
+            print(f"  flagged {row['id']:>3}  {row['title']}"
+                  + (f"  --  {note}" if note else ""))
+            off += 1
+        else:
+            print(f"  ! {f.name}: verdict is {verdict!r}")
+            skipped += 1
+
+    con.commit()
+    print(f"{ok} confirmed, {off} flagged, {skipped} skipped")
+    if off or ok:
+        print("now run ./render and republish BOOKSHELF")
+
+
+if __name__ == "__main__":
+    main(sys.argv)

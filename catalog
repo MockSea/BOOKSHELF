@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+"""Shelf catalog. Rows come off photos, so every row says how sure it is.
+
+Status is the only thing that matters when the data gets used later:
+  unverified  - read off a spine, nothing checked it
+  needs_input - I could not read it, or two readings are plausible; `question` says what I need
+  confirmed   - Mo confirmed it, or it was checked against a catalog record
+"""
+
+import argparse, csv, json, os, shutil, sqlite3, sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+DB = HERE / "catalog.db"
+PHOTOS = HERE / "photos"
+EXPORTS = HERE / "exports"
+
+FIELDS = [
+    "spine", "photo_id", "shelf", "position", "title", "subtitle", "authors",
+    "publisher", "year", "edition", "isbn13", "isbn10", "format", "language",
+    "series", "series_index", "contributor", "status", "confidence",
+    "question", "notes",
+]
+
+
+def connect():
+    if not DB.exists():
+        sys.exit(f"no database at {DB} - run schema.sql first")
+    con = sqlite3.connect(DB)
+    con.row_factory = sqlite3.Row
+    con.execute("PRAGMA foreign_keys = ON")
+    return con
+
+
+def parse_pairs(pairs):
+    """`title=Dune` style arguments, validated against the column list."""
+    out = {}
+    for p in pairs:
+        if "=" not in p:
+            sys.exit(f"expected field=value, got {p!r}")
+        k, v = p.split("=", 1)
+        if k not in FIELDS:
+            sys.exit(f"unknown field {k!r}; known: {', '.join(FIELDS)}")
+        out[k] = v if v != "" else None
+    return out
+
+
+def cmd_photo(args):
+    src = Path(args.path).expanduser().resolve()
+    if not src.is_file():
+        sys.exit(f"no such file: {src}")
+    PHOTOS.mkdir(exist_ok=True)
+    dest = PHOTOS / src.name
+    n = 1
+    while dest.exists():
+        dest = PHOTOS / f"{src.stem}-{n}{src.suffix}"
+        n += 1
+    shutil.copy2(src, dest)
+    rel = str(dest.relative_to(HERE))
+    con = connect()
+    cur = con.execute(
+        "INSERT INTO photos (path, shelf, note) VALUES (?,?,?)",
+        (rel, args.shelf, args.note),
+    )
+    con.commit()
+    print(f"photo {cur.lastrowid}  {rel}")
+
+
+def cmd_add(args):
+    vals = parse_pairs(args.fields)
+    if not vals.get("title"):
+        sys.exit("a row needs at least title=")
+    cols = ", ".join(vals)
+    marks = ", ".join("?" * len(vals))
+    con = connect()
+    cur = con.execute(f"INSERT INTO books ({cols}) VALUES ({marks})", list(vals.values()))
+    con.commit()
+    print(f"book {cur.lastrowid}  {vals['title']}")
+
+
+def cmd_set(args):
+    vals = parse_pairs(args.fields)
+    if not vals:
+        sys.exit("nothing to set")
+    sets = ", ".join(f"{k} = ?" for k in vals)
+    con = connect()
+    cur = con.execute(f"UPDATE books SET {sets} WHERE id = ?", [*vals.values(), args.id])
+    con.commit()
+    if not cur.rowcount:
+        sys.exit(f"no book with id {args.id}")
+    print(f"book {args.id} updated: {', '.join(vals)}")
+
+
+def cmd_confirm(args):
+    con = connect()
+    cur = con.execute(
+        "UPDATE books SET status='confirmed', question=NULL WHERE id IN (%s)"
+        % ",".join("?" * len(args.ids)),
+        args.ids,
+    )
+    con.commit()
+    print(f"{cur.rowcount} confirmed")
+
+
+def row_line(r):
+    bits = [f"{r['id']:>4}", r["title"] or "?"]
+    if r["authors"]:
+        bits.append(f"- {r['authors']}")
+    if r["year"]:
+        bits.append(f"({r['year']})")
+    tail = []
+    if r["shelf"]:
+        tail.append(r["shelf"] + (f"#{r['position']}" if r["position"] else ""))
+    if r["status"] != "confirmed":
+        tail.append(r["status"])
+    line = "  ".join(bits)
+    return f"{line}   [{', '.join(tail)}]" if tail else line
+
+
+def cmd_list(args):
+    con = connect()
+    where, params = [], []
+    if args.shelf:
+        where.append("shelf = ?")
+        params.append(args.shelf)
+    if args.status:
+        where.append("status = ?")
+        params.append(args.status)
+    sql = "SELECT * FROM books"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY shelf, position, id"
+    rows = con.execute(sql, params).fetchall()
+    for r in rows:
+        print(row_line(r))
+    print(f"\n{len(rows)} books")
+
+
+def cmd_open(args):
+    """Everything I need Mo to answer, in one readable block."""
+    con = connect()
+    rows = con.execute(
+        "SELECT * FROM books WHERE status='needs_input' ORDER BY shelf, position, id"
+    ).fetchall()
+    if not rows:
+        print("nothing waiting on Mo")
+        return
+    for r in rows:
+        print(row_line(r))
+        if r["spine"]:
+            print(f"      spine reads: {r['spine']}")
+        print(f"      Q: {r['question'] or '(no question written)'}")
+        print()
+    print(f"{len(rows)} waiting")
+
+
+def cmd_stats(args):
+    con = connect()
+    total = con.execute("SELECT count(*) FROM books").fetchone()[0]
+    print(f"{total} books, {con.execute('SELECT count(*) FROM photos').fetchone()[0]} photos")
+    for status, n in con.execute(
+        "SELECT status, count(*) FROM books GROUP BY status ORDER BY 2 DESC"
+    ):
+        print(f"  {status:<12} {n}")
+    for shelf, n in con.execute(
+        "SELECT coalesce(shelf,'(no shelf)'), count(*) FROM books GROUP BY 1 ORDER BY 1"
+    ):
+        print(f"  {shelf:<12} {n}")
+
+
+def cmd_export(args):
+    con = connect()
+    rows = [dict(r) for r in con.execute("SELECT * FROM books ORDER BY shelf, position, id")]
+    EXPORTS.mkdir(exist_ok=True)
+    out = EXPORTS / f"catalog.{args.format}"
+    if args.format == "json":
+        out.write_text(json.dumps(rows, indent=2, ensure_ascii=False))
+    else:
+        with out.open("w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(rows[0]) if rows else ["id", *FIELDS])
+            w.writeheader()
+            w.writerows(rows)
+    print(f"{len(rows)} books -> {out}")
+
+
+def main():
+    p = argparse.ArgumentParser(prog="catalog", description=__doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    s = sub.add_parser("photo", help="file a shelf photo and get its id")
+    s.add_argument("path")
+    s.add_argument("--shelf")
+    s.add_argument("--note")
+    s.set_defaults(func=cmd_photo)
+
+    s = sub.add_parser("add", help="add a book: catalog add title=Dune authors='Herbert, Frank'")
+    s.add_argument("fields", nargs="+")
+    s.set_defaults(func=cmd_add)
+
+    s = sub.add_parser("set", help="edit a book: catalog set 12 year=1965 status=confirmed")
+    s.add_argument("id", type=int)
+    s.add_argument("fields", nargs="+")
+    s.set_defaults(func=cmd_set)
+
+    s = sub.add_parser("confirm", help="mark ids confirmed and clear their question")
+    s.add_argument("ids", nargs="+", type=int)
+    s.set_defaults(func=cmd_confirm)
+
+    s = sub.add_parser("list", help="list books")
+    s.add_argument("--shelf")
+    s.add_argument("--status", choices=["unverified", "needs_input", "confirmed"])
+    s.set_defaults(func=cmd_list)
+
+    s = sub.add_parser("open", help="everything waiting on Mo, with the question")
+    s.set_defaults(func=cmd_open)
+
+    s = sub.add_parser("stats", help="counts by status and shelf")
+    s.set_defaults(func=cmd_stats)
+
+    s = sub.add_parser("export", help="write exports/catalog.json or .csv")
+    s.add_argument("--format", choices=["json", "csv"], default="json")
+    s.set_defaults(func=cmd_export)
+
+    args = p.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

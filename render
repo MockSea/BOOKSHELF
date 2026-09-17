@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+"""Build the BOOKSHELF page from the catalog.
+
+Reads catalog.db, writes docs/index.html. GitHub Pages serves docs/ off main,
+so the site is whatever was last committed: run this after every batch, commit
+the page next to the database it came from, and push.
+"""
+
+import json
+import re
+import sqlite3
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+DB = HERE / "catalog.db"
+OUT = HERE / "docs" / "index.html"
+TEMPLATE = HERE / "bookshelf.template.html"
+
+TARGET = 60  # shelves in the collection, not books
+
+
+def books():
+    con = sqlite3.connect(DB)
+    con.row_factory = sqlite3.Row
+    rows = [dict(r) for r in con.execute(
+        "SELECT * FROM books ORDER BY shelf, position, id")]
+    for r in rows:
+        r.pop("created_at", None)
+        r.pop("updated_at", None)
+    return rows
+
+
+def shelves(rows):
+    """Roll the books up to the unit the headline counts.
+
+    `shelf` on a row is a stack ("1A"); the shelf itself is its leading digits.
+    A shelf is verified only when every book on it is, so one unchecked spine
+    keeps the whole shelf out of the verified count.
+    """
+    by = {}
+    for r in rows:
+        num = re.match(r"\d+", r["shelf"] or "")
+        if not num:
+            continue
+        s = by.setdefault(num.group(), {"shelf": num.group(), "books": 0,
+                                        "confirmed": 0, "stacks": set()})
+        s["books"] += 1
+        s["confirmed"] += r["status"] == "confirmed"
+        s["stacks"].add(r["shelf"])
+    out = []
+    for s in sorted(by.values(), key=lambda s: int(s["shelf"])):
+        s["stacks"] = len(s["stacks"])
+        s["verified"] = s["books"] > 0 and s["confirmed"] == s["books"]
+        out.append(s)
+    return out
+
+
+def main():
+    rows = books()
+    if not TEMPLATE.exists():
+        sys.exit(f"missing {TEMPLATE}")
+    payload = {
+        "target": TARGET,
+        "books": rows,
+        "shelves": shelves(rows),
+        "counts": {
+            "total": len(rows),
+            "confirmed": sum(r["status"] == "confirmed" for r in rows),
+            "unverified": sum(r["status"] != "confirmed" for r in rows),
+        },
+    }
+    html = TEMPLATE.read_text()
+    marker = "/*DATA*/"
+    if html.count(marker) != 1:
+        sys.exit("template needs exactly one /*DATA*/ marker")
+    html = html.replace(marker, json.dumps(payload, ensure_ascii=False))
+    OUT.parent.mkdir(exist_ok=True)
+    OUT.write_text(html)
+    done = sum(s["verified"] for s in payload["shelves"])
+    print(f"{len(payload['shelves'])}/{TARGET} shelves logged, {done} verified "
+          f"({len(rows)} books) -> {OUT}")
+
+
+if __name__ == "__main__":
+    main()
