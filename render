@@ -19,6 +19,34 @@ TEMPLATE = HERE / "bookshelf.template.html"
 
 TARGET = 60  # shelves in the collection, not books
 
+# The template is a fragment, because that is the shape the artifact runtime
+# wants - it supplies the document skeleton itself. Served raw off Pages there
+# is no skeleton, and without a viewport meta a phone lays the page out at
+# 980px and never reaches the 720px media query. So we supply our own: the
+# same charset, viewport and three reset rules the artifact wrapper gave us.
+#
+# No <head> or <body> tag on purpose. The parser opens head, keeps the
+# fragment's own <title>, <link> and <style> in it, and opens body at the
+# first real element - which is exactly the document the artifact produced.
+SKELETON = """<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A shelf of books, catalogued from \
+photographs.">
+<meta property="og:title" content="BOOKSHELF">
+<meta property="og:description" content="A shelf of books, catalogued from \
+photographs.">
+<link rel="icon" href="data:image/svg+xml,\
+%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E\
+%3Ctext y='.9em' font-size='90'%3E\U0001F4DA%3C/text%3E%3C/svg%3E">
+<style>
+  :root { color-scheme: light; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+"""
+
 
 def books():
     con = sqlite3.connect(DB)
@@ -74,7 +102,8 @@ def main():
     marker = "/*DATA*/"
     if html.count(marker) != 1:
         sys.exit("template needs exactly one /*DATA*/ marker")
-    html = html.replace(marker, json.dumps(payload, ensure_ascii=False))
+    html = SKELETON + html.replace(marker,
+                                   json.dumps(payload, ensure_ascii=False))
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(html)
     done = sum(s["verified"] for s in payload["shelves"])
