@@ -59,7 +59,7 @@ an entry in `log.md`.
 
 ## The page
 
-Live at <https://mocksea.github.io/bookshelf/>.
+Live at <https://mocksea.github.io/BOOKSHELF/>.
 
 GitHub Pages serves the `docs/` folder off `main`, so the published site is
 exactly what was last pushed. The loop is two commands and a push:

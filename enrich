@@ -17,7 +17,7 @@ import json, re, sqlite3, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
 DB = Path(__file__).resolve().parent / "catalog.db"
-UA = "BOOKSHELF/1.0 (personal library catalogue; github.com/MockSea/bookshelf)"
+UA = "BOOKSHELF/1.0 (personal library catalogue; github.com/MockSea/BOOKSHELF)"
 PAUSE = 0.4  # both APIs are free and unmetered; don't hammer them
 
 
