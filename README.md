@@ -42,6 +42,7 @@ inference from that, which is why the two are separate columns.
 ```sh
 ./enrich              # match each book to an Open Library work, then to an edition
 ./enrich --editions   # only the edition pass, for books already matched to a work
+./enrich --summaries  # only the blurbs, from Google Books; needs a key
 ./enrich-retry        # re-run the misses with looser matching
 ```
 
@@ -63,7 +64,22 @@ photograph and a verdict from Mo both outrank a catalogue.
 
 Summaries are the one real gap. They come from the work record's `description`,
 and most Open Library work records have none. Google Books has them and rejects
-every unauthenticated request with a 429, so closing that gap needs an API key.
+every unauthenticated request with a 429, so it needs a key:
+
+```sh
+mkdir -p ~/.config/bookshelf && pbpaste > ~/.config/bookshelf/googlebooks.key
+./enrich --summaries
+```
+
+`GOOGLE_BOOKS_KEY` in the environment works too. The key never goes in the repo,
+which is public. Get one at
+<https://console.cloud.google.com/apis/library/books.googleapis.com> (enable the
+API) then <https://console.cloud.google.com/apis/credentials> (create an API key,
+restricted to the Books API).
+
+`--summaries` writes only `summary`, and only where there isn't one. Subjects and
+page count already came from an edition tied to this printing; Google's are about
+some edition of the work, which would be a downgrade.
 
 ## Commands
 
