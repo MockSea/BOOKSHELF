@@ -410,6 +410,14 @@
     background: var(--paper);
     color: var(--ink);
   }
+  /* A column, and only once it is open - a dialog is display:none when closed
+     and a blanket display:flex would show it. Without this the record is a
+     block taller than max-height, the dialog clips it, and the top of a long
+     summary is simply gone. min-height:0 is the half that does the work: a
+     flex item defaults to min-height:auto and refuses to shrink under its
+     own content, so .m-body would never scroll no matter what overflow says. */
+  dialog[open] { display: flex; flex-direction: column; }
+  .m-head { flex: 0 0 auto; }
   dialog::backdrop { background: rgba(18,49,143,.6); }
   .m-head { background: var(--blue); color: #fff; padding: 17px 20px; }
   .m-head h2 {
@@ -421,7 +429,9 @@
     overflow-wrap: anywhere;
   }
   .m-head p { margin: 6px 0 0; font-size: 13.5px; color: #DCE5FF; }
-  .m-body { padding: 17px 20px 22px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .m-body { flex: 1 1 auto; min-height: 0; padding: 17px 20px 22px;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain; }
   .m-body dl { margin: 0; display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 9px 14px; }
   .m-body dt {
     font-size: 11px;
