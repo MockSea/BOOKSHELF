@@ -11,6 +11,8 @@ library/
   exports/            generated JSON/CSV for whatever comes next
   enrich              Open Library: the work, then the printing on the shelf
   enrich-retry        re-runs the misses with looser matching
+  records.py          subtitles, covers and checks against the matched records
+  validate            compares every row with its record and its spine
   render              catalog.db -> docs/index.html  (the public site)
   render-swipe        catalog.db -> swipe.html       (private verification)
   apply-verdicts      swipe verdicts -> catalog.db
@@ -44,6 +46,10 @@ inference from that, which is why the two are separate columns.
 ./enrich --editions   # only the edition pass, for books already matched to a work
 ./enrich --summaries  # only the blurbs, from Google Books; needs a key
 ./enrich-retry        # re-run the misses with looser matching
+./enrich --subtitles  # subtitles, and titles a record shows were cut short
+./enrich --covers     # covers from the matched edition, each one checked
+./validate            # report where a row disagrees with its record or spine
+./validate --apply    # ...and turn the doubts into needs_input questions
 ```
 
 Two lookups, because a shelf holds an *edition* and the obvious lookup answers
@@ -80,6 +86,37 @@ restricted to the Books API).
 `--summaries` writes only `summary`, and only where there isn't one. Subjects and
 page count already came from an edition tied to this printing; Google's are about
 some edition of the work, which would be a downgrade.
+
+### Subtitles, covers and validation
+
+These three read the record a book is already tied to (`ol_edition`, else
+`ol_work`) and never search for a new one, so they can only be as right as the
+match. Responses are cached in `work/records-cache.json` (gitignored), which
+makes a re-run free; delete it to fetch fresh.
+
+`--subtitles` takes the subtitle from the edition when the book is tied to one,
+otherwise from the work. Where the two disagree the spine decides, and where
+the spine can't, the row gets a question instead of a subtitle. A work with
+several editions that disagree (some printings carry the subtitle and some
+don't) also gets a question. Genre labels like "A Novel" are not subtitles and
+are skipped. When both records give a longer title that contains ours, the
+title is completed and the old one goes into `notes`.
+
+`--covers` prefers the tied edition's own cover, then the ISBN cover, then a
+Google Books thumbnail for that exact ISBN, then the work's. Each candidate is
+fetched: it has to be a 200, an image, at least 40px a side, and not one of the
+"No image available" graphics in `PLACEHOLDER_MD5`. A cover that already works
+is kept unless the tied edition has its own. Covers are hotlinked from
+covers.openlibrary.org; the page falls back to a blank card when one fails.
+
+`validate` checks title, subtitle, authors, year, publisher, ISBN (including the
+checksum) and volume number against the records and the spine text. `info` is a
+difference worth knowing (an abbreviated imprint, a spine subtitle that differs
+from the catalogue's), `doubt` is one that needs a person, and `error` is one
+the data proves. `--apply` writes a question for every doubt and error.
+
+Google Books is only consulted by exact ISBN. Its search endpoints returned
+nothing useful for these books on 2026-10-01, keyed or not.
 
 ## Commands
 
