@@ -135,7 +135,7 @@
   .table { border-top: 1px solid var(--ink); }
   .row {
     display: grid;
-    grid-template-columns: 130px minmax(240px, 1.6fr) minmax(160px, 1fr) minmax(140px, .8fr) 110px;
+    grid-template-columns: 40px 120px minmax(240px, 1.6fr) minmax(160px, 1fr) minmax(140px, .8fr) 110px;
     gap: 20px; align-items: center;
     padding: 17px 8px; border-bottom: 1px solid var(--line);
   }
@@ -150,6 +150,19 @@
   .loc { font: 500 12px var(--mono); color: #4F4C45; }
   .title { font-family: var(--display); font-size: 18px; line-height: 1.25; }
   .title .sub { display: block; font-style: normal; font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* A cover is a small card pinned to the index card, not a hero image: the
+     same hairline and paper as everything else, and where there is no cover
+     the card is left blank with the title's initial, the way a library stub
+     would be pencilled. */
+  .thumb {
+    width: 40px; aspect-ratio: 2/3; background: var(--soft); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    font: 400 17px var(--display); color: #A8A397; align-self: center;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thead .thumb { background: none; border: 0; aspect-ratio: auto; }
   .secondary { color: #5D5A53; font-size: 14px; }
   .status { display: flex; align-items: center; font: 600 11px var(--mono); white-space: nowrap; }
   .t-none { color: #9A968C; }
@@ -192,6 +205,7 @@
   }
   .bookCover img { width: 100%; height: 100%; object-fit: cover; display: block; }
   #d-title { font: 400 34px/1.04 var(--display); letter-spacing: -.035em; margin: 0 0 9px; text-wrap: balance; }
+  .d-subtitle { display: block; font-size: 19px; line-height: 1.25; letter-spacing: -.01em; color: var(--soft-ink); margin-top: 8px; }
   .drawerAuthor { font-size: 16px; color: var(--muted); margin: 0 0 22px; }
   .drawerStatus { display: inline-flex; align-items: center; font: 600 11px var(--mono); text-transform: uppercase; margin-bottom: 28px; }
 
@@ -242,10 +256,11 @@
        it, shelf and owner on the base line. Same elements, different grid. */
     .thead { display: none; }
     .row {
-      grid-template-columns: 1fr auto;
-      grid-template-areas: "title status" "author author" "loc who";
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+      grid-template-areas: "thumb title status" "thumb author author" "thumb loc who";
       gap: 6px 14px; align-items: start; padding: 18px 4px;
     }
+    .row .thumb { grid-area: thumb; width: 44px; align-self: start; }
     .row .title { grid-area: title; font-size: 19px; }
     .row .status { grid-area: status; }
     .row .author { grid-area: author; }
@@ -331,6 +346,7 @@
 
       <div class="table" role="table" aria-label="Cataloged books">
         <div class="row thead" role="row">
+          <span class="thumb" role="columnheader"><span class="vh">Cover</span></span>
           <span role="columnheader">Where</span>
           <span role="columnheader">Title</span>
           <span role="columnheader">Author</span>
@@ -379,6 +395,26 @@ const state = b => verified(b) ? 'confirmed' : 'unverified';
 const label = b => verified(b) ? 'Verified' : 'Logged';
 const dot = b => `<i class="dot ${verified(b) ? 'verified' : 'logged'}" aria-hidden="true"></i>`;
 const nowt = '<span class="t-none">&mdash;</span>';
+
+/* "Davos Man: How the Billionaires Devoured the World". A title that ends in
+   its own ? or ! takes no colon. Mirrors full() in records.py. */
+const sep = b => /[?!]$/.test(b.title) ? ' ' : ': ';
+const fullTitle = b => b.subtitle ? b.title + sep(b) + b.subtitle : b.title;
+const initial = b => (b.title.replace(/^[^\p{L}\p{N}]+/u, '')[0] || '').toUpperCase();
+
+/* Covers are hotlinked from Open Library and load only when scrolled near.
+   One that fails to load falls back to the blank card, never a broken icon. */
+const cover = b => b.cover_url
+  ? `<img src="${esc(b.cover_url)}" alt="Cover of ${esc(fullTitle(b))}" loading="lazy" decoding="async" width="40" height="60" data-fallback="${esc(initial(b))}">`
+  : `<span aria-hidden="true">${esc(initial(b))}</span>`;
+document.addEventListener('error', e => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.dataset.fallback) return;
+  const stub = document.createElement('span');
+  stub.setAttribute('aria-hidden', 'true');
+  stub.textContent = img.dataset.fallback;
+  img.replaceWith(stub);
+}, true);
 
 /* ---- headline, and the 60 shelves as sixty cells ---- */
 const loggedShelves = SHELVES.length;
@@ -459,8 +495,9 @@ function draw() {
 
   $('rows').innerHTML = hit.map(b => `
     <div class="row data" role="row" tabindex="0" data-id="${b.id}">
+      <span class="thumb" role="cell">${cover(b)}</span>
       <span class="loc" role="cell">${esc(where(b))}</span>
-      <span class="title" role="cell">${esc(b.title)}${b.subtitle ? `<span class="sub">${esc(b.subtitle)}</span>` : ''}</span>
+      <span class="title" role="cell">${esc(b.title)}${b.subtitle ? `<span class="sub"><span class="vh">${sep(b)}</span>${esc(b.subtitle)}</span>` : ''}</span>
       <span class="secondary author" role="cell">${b.authors ? esc(b.authors) : nowt}</span>
       <span class="secondary who" role="cell">${b.contributor ? esc(b.contributor) : nowt}</span>
       <span class="status" role="cell">${dot(b)}${label(b)}</span>
@@ -497,11 +534,12 @@ function open(b) {
   if (!b) return;
 
   $('d-cover').innerHTML = b.cover_url
-    ? `<img src="${esc(b.cover_url)}" alt="" loading="lazy">`
+    ? `<img src="${esc(b.cover_url)}" alt="Cover of ${esc(fullTitle(b))}" loading="lazy" data-fallback="NO COVER">`
     : 'NO COVER';
 
-  $('d-title').textContent = b.title;
-  $('d-sub').textContent = b.authors || b.subtitle || '';
+  $('d-title').innerHTML = esc(b.title) + (b.subtitle
+    ? `<span class="d-subtitle"><span class="vh">${sep(b)}</span>${esc(b.subtitle)}</span>` : '');
+  $('d-sub').textContent = b.authors || '';
   $('d-state').innerHTML = dot(b) + label(b) + (b.contributor ? ' · ' + esc(b.contributor) + "'s copy" : '');
 
   const source = b.enrich_source === 'none' ? '' : (b.enrich_source || '');
@@ -532,7 +570,6 @@ function open(b) {
   const copy = dl([
     ['Location', esc(where(b))],
     ['Spine reads', b.spine ? `<span class="spine">${esc(b.spine)}</span>` : ''],
-    ['Subtitle', esc(b.subtitle || '')],
     ['Publisher', esc(b.publisher || '')],
     ['Year', b.year || ''],
     ['Edition', esc(b.edition || '')],

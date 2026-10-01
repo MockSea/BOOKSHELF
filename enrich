@@ -667,5 +667,11 @@ if __name__ == "__main__":
         editions_pass()
     elif "--summaries" in sys.argv:
         summaries_pass()
+    elif "--subtitles" in sys.argv:
+        import records
+        records.subtitles_pass()
+    elif "--covers" in sys.argv:
+        import records
+        records.covers_pass()
     else:
         main()

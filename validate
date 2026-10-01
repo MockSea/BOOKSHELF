@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Check every row against the records it is matched to, and say where they differ.
+
+    ./validate            report only
+    ./validate --apply    also park every unsettled disagreement at needs_input
+
+Compares title, subtitle, authors, year, publisher and ISBN with the matched
+Open Library edition and work, and the title with the spine it was read from.
+Nothing here rewrites a field: a disagreement is either something a person
+can settle (it becomes a question) or a difference of form (it is listed).
+Clear errors get fixed by hand, with the old value kept in notes - see log.md.
+"""
+
+import sys
+from collections import Counter
+import records as R
+
+FIELDS = ("title", "subtitle", "authors", "year", "publisher", "isbn13", "edition")
+
+QUESTION = {
+    "title": "Title: we have \"{ours}\", the {source} says \"{theirs}\". Which is on the book?",
+    "authors": "Author: we have \"{ours}\", the matched record names {theirs}. Is the match the right book?",
+    "year": "Year: we have {ours}, the matched edition says {theirs}. Which year is on the copyright page?",
+    "publisher": "Publisher: we have \"{ours}\", the matched edition says \"{theirs}\". Which imprint is on the spine?",
+    "isbn13": "ISBN: we have {ours}, the matched edition lists {theirs}. What ISBN is on the back cover?",
+    "edition": "Edition: the spine reads {ours}, the matched record is {theirs}. Which volume is this?",
+}
+
+
+def main():
+    apply = "--apply" in sys.argv
+    con = R.connect()
+    rows = [dict(r) for r in con.execute("SELECT * FROM books ORDER BY id")]
+    checked, differ = Counter(), Counter()
+    flagged = 0
+    for b in rows:
+        rec = R.record(b)
+        has_ed, has_any = bool(rec["ed"]), bool(rec["ed"] or rec["work"])
+        if has_any:
+            checked["title"] += 1
+            checked["subtitle"] += bool(b["subtitle"])
+            checked["authors"] += bool(rec["authors"] and b["authors"])
+        if has_ed:
+            checked["year"] += bool(b["year"])
+            checked["publisher"] += bool(b["publisher"])
+            checked["isbn13"] += bool(b["isbn13"])
+            checked["edition"] += 1
+        for field, ours, theirs, source, sev in R.check(b, rec):
+            differ[(field, sev)] += 1
+            print(f"[{b['id']:>3}] {sev:<5} {field:<9} ours={ours!r}  {source}={theirs!r}")
+            if apply and sev in ("doubt", "error") and field in QUESTION:
+                q = QUESTION[field].format(ours=ours, theirs=theirs, source=source)
+                flagged += R.ask(con, b, q)
+    con.commit()
+    R.save()
+
+    print(f"\n{'field':<10} {'checked':>7} {'info':>5} {'doubt':>5} {'error':>5}")
+    for f in FIELDS:
+        print(f"{f:<10} {checked[f]:>7} {differ[(f, 'info')]:>5} "
+              f"{differ[(f, 'doubt')]:>5} {differ[(f, 'error')]:>5}")
+    print(f"\n{len(rows)} rows; {sum(1 for b in rows if b['ol_work'] or b['ol_edition'])} "
+          f"with a matched record, {sum(1 for b in rows if b['ol_edition'])} with an edition")
+    if apply:
+        print(f"{flagged} new questions written")
+
+
+if __name__ == "__main__":
+    main()
