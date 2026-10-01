@@ -283,6 +283,8 @@ PLACEHOLDER_MD5 = {
 
 def check_image(url):
     """(ok, detail). Real means 200, an image type, and a plausible size."""
+    if not url.startswith("https://"):
+        return (False, "not https")
     c = _load().setdefault("_img", {})
     if url in c:
         return tuple(c[url])
@@ -325,7 +327,11 @@ def cover_candidates(book, rec):
     for cid in (rec["work"] or {}).get("covers") or []:
         if isinstance(cid, int) and cid > 0:
             out.append((f"https://covers.openlibrary.org/b/id/{cid}-M.jpg", "work"))
-    return out
+    # urlopen also opens file:// and ftp://, so only https ever reaches check_image.
+    return [(u, src) for u, src in out if isinstance(u, str) and u.startswith("https://")]
+
+
+assert cover_candidates({}, {"ed": None, "work": None, "gb": {"imageLinks": {"thumbnail": "file:///etc/passwd"}}}) == []
 
 
 # --- validation ------------------------------------------------------------
