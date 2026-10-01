@@ -45,8 +45,9 @@ def main():
     marker = "/*DATA*/"
     if html.count(marker) != 1:
         sys.exit("template needs exactly one /*DATA*/ marker")
-    OUT.write_text(html.replace(marker, json.dumps({"books": rows},
-                                                   ensure_ascii=False)))
+    # Escape "<" so catalogue text can't close the <script> it sits in.
+    data = json.dumps({"books": rows}, ensure_ascii=False).replace("<", "\\u003c")
+    OUT.write_text(html.replace(marker, data))
     print(f"{len(rows)} books -> {OUT}")
 
 

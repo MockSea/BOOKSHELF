@@ -463,3 +463,43 @@ only thing that could resolve it was asking.
 3. Whether the two duplicate pairs should stay as two rows each or collapse to
    one row with a count. They are two rows for now, because that is what the
    shelf holds.
+
+---
+
+## 2026-10-01 - subtitles, covers, and a check of every row
+
+Not a photo batch. Three passes over the 153 books already catalogued, using
+the Open Library record each one is tied to.
+
+**Subtitles: 22 → 79.** 57 filled. Two titles were cut short and are now
+complete, with the old title kept in `notes`: *Bubble or Revolution?* is
+*Blockchain Bubble or Revolution?* (#42), and *Rival Views of Market Society*
+is *Rival Views of Market Society and Other Recent Essays* (#118). One question
+instead of a fill: *Pure War* (#87) has printings with "Twenty Five Years Later"
+and printings without, and the work record can't say which this is.
+
+**Covers: 112 → 112, 37 replaced.** Each replacement is the tied edition's own
+cover in place of whatever cover the work happened to have. One of those was a
+real fault: *Letters to the Sons of Society* (#5) was showing an Amazon "No image
+available" graphic that someone uploaded to Open Library as a cover. It passes
+a size check, so the cover check now rejects it by hash. 41 books still have no
+cover: 20 have no Open Library record and 21 have a work with no cover on it.
+
+**Saga was tied to the wrong volume.** The spine says 7; enrich had tied #20 to
+Volume Ten, because the volume number sits in the edition's subtitle and the
+match only looked at the title. Re-tied to Volume Seven, which corrects the year
+(2022 → 2017), the ISBN (9781534323346 → 9781534300606), the cover and the
+summary, and drops a page count that belonged to Volume Ten. `validate` now
+compares spine volume numbers against title and subtitle together.
+
+**Validation.** `./validate` compared title, subtitle, authors, year, publisher
+and ISBN against the records and the spine for every row. After the Saga fix
+there are no doubts or errors left. What remains is informational: imprints the
+spine abbreviates (FSG, HMH, UNC), and two books whose spine subtitle differs
+from Open Library's (*Davos Man*, #3; *Epic Win for Anonymous*, #133), where the
+spine was kept. The four books tied to an edition only because it was the work's
+sole edition (#100, #106, #113, #152) carry that edition's year and ISBN without
+the spine confirming them.
+
+Google Books returned nothing useful for title or author searches today, keyed
+or not, so it is only used for exact ISBN lookups.
