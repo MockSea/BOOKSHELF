@@ -102,8 +102,11 @@ def main():
     marker = "/*DATA*/"
     if html.count(marker) != 1:
         sys.exit("template needs exactly one /*DATA*/ marker")
-    html = SKELETON + html.replace(marker,
-                                   json.dumps(payload, ensure_ascii=False))
+    # The data sits inside a <script>, and some of it is Open Library text,
+    # which anyone can edit. JSON leaves "<" alone, so a "</script>" in a
+    # subtitle would close the block. \u003c means the same to JSON.parse.
+    data = json.dumps(payload, ensure_ascii=False).replace("<", "\\u003c")
+    html = SKELETON + html.replace(marker, data)
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(html)
     done = sum(s["verified"] for s in payload["shelves"])
