@@ -282,6 +282,8 @@ const BOOKS = DATA.books;
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Title and subtitle as one string, the way the public page joins them. */
+const fullTitle = b => b.subtitle ? b.title + (/[?!]$/.test(b.title) ? ' ' : ': ') + b.subtitle : b.title;
 
 /* Verdicts live in the artifact's own store, not in this page, because the
    page is republished every time the catalogue changes and anything held in
@@ -369,7 +371,7 @@ function doneHTML() {
   const off = [...verdicts.entries()].filter(([, v]) => v.verdict === 'off');
   const list = off.map(([id, v]) => {
     const b = BOOKS.find(b => b.id === Number(id));
-    return `<li>${esc(b ? b.title : id)}${v.note ? `<em>${esc(v.note)}</em>` : '<em>No note</em>'}</li>`;
+    return `<li>${esc(b ? fullTitle(b) : id)}${v.note ? `<em>${esc(v.note)}</em>` : '<em>No note</em>'}</li>`;
   }).join('');
   return `<div class="done">
     <h2>Shelf 1, checked.</h2>
@@ -442,7 +444,7 @@ async function commit(verdict) {
     card.style.transform = `translate(${verdict === 'ok' ? 700 : -700}px, 60px) rotate(${verdict === 'ok' ? 24 : -24}deg)`;
   }
 
-  const row = { verdict, note: '', at: new Date().toISOString(), title: book.title };
+  const row = { verdict, note: '', at: new Date().toISOString(), title: fullTitle(book) };
   verdicts.set(id, row);
   queue = queue.slice(1);
   history.push(id);
@@ -456,7 +458,7 @@ async function commit(verdict) {
     fail(e);
   }
 
-  if (verdict === 'off') openNote(id, book.title);
+  if (verdict === 'off') openNote(id, fullTitle(book));
   setTimeout(() => { busy = false; draw(); }, card ? 260 : 0);
 }
 
