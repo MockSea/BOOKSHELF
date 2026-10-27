@@ -19,10 +19,13 @@ be audited against exactly what it read.
 
 import hashlib, json, re, struct, sys, time, urllib.parse, urllib.request
 from pathlib import Path
+import importlib.util
 from importlib.machinery import SourceFileLoader
 
 HERE = Path(__file__).resolve().parent
-E = SourceFileLoader("enrich", str(HERE / "enrich")).load_module()
+_loader = SourceFileLoader("enrich", str(HERE / "enrich"))
+E = importlib.util.module_from_spec(importlib.util.spec_from_loader("enrich", _loader))
+_loader.exec_module(E)
 CACHE = HERE / "work" / "records-cache.json"
 PAUSE = 0.3
 

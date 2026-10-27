@@ -13,8 +13,11 @@ from pathlib import Path
 import urllib.parse
 
 # `enrich` has no .py suffix, so it needs the loader named outright.
+import importlib.util
 from importlib.machinery import SourceFileLoader
-E = SourceFileLoader("enrich", str(Path(__file__).resolve().parent / "enrich")).load_module()
+_loader = SourceFileLoader("enrich", str(Path(__file__).resolve().parent / "enrich"))
+E = importlib.util.module_from_spec(importlib.util.spec_from_loader("enrich", _loader))
+_loader.exec_module(E)
 
 
 def freetext(book):
