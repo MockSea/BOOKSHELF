@@ -135,8 +135,8 @@ nothing useful for these books on 2026-10-01, keyed or not.
 
 A Google Drive folder, `BOOKSHELF`, shared privately with me - the folder ids
 are not in this repo. Mo uploads into `NEW/`; once a photo's books are in the database the image moves
-to `SORTED/`, so the two folders are the work queue. Every photo processed gets
-an entry in `log.md`.
+to `SORTED/`, so the two folders are the work queue. The working log is kept locally and is not
+part of this repo.
 
 ## The page
 

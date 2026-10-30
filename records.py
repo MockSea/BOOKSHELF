@@ -11,7 +11,7 @@ ISBN. A result counts only if its own identifiers list that ISBN. On 1 Oct
 2026 its structured search (`isbn:`, `intitle:`) returned nothing for any
 book, keyed or not, and free text returned unrelated titles, so this side
 currently contributes nothing; it starts contributing when Google answers
-again, and the passes can simply be rerun. See log.md.
+again, and the passes can simply be rerun.
 
 Responses are cached in work/ (gitignored) so a rerun is cheap and a run can
 be audited against exactly what it read.

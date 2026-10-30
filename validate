@@ -8,7 +8,7 @@ Compares title, subtitle, authors, year, publisher and ISBN with the matched
 Open Library edition and work, and the title with the spine it was read from.
 Nothing here rewrites a field: a disagreement is either something a person
 can settle (it becomes a question) or a difference of form (it is listed).
-Clear errors get fixed by hand, with the old value kept in notes - see log.md.
+Clear errors get fixed by hand, with the old value kept in notes.
 """
 
 import sys
